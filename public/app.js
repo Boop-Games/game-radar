@@ -102,6 +102,15 @@ function deltaChip(g) {
   return `<span class="chip ${g.rankDelta > 0 ? 'up' : 'dn'}" title="vs ${hrsStr(g.windowHours)} ago">${g.rankDelta > 0 ? '▲' : '▼'} ${Math.abs(g.rankDelta)}</span>`;
 }
 
+function shortRiseReasons(g) {
+  return (g.reasons || []).slice(0, 2).map((reason) => reason
+    .replace(/ ratings\/day/g, '/day')
+    .replace(/Trending rank/g, 'Trending')
+    .replace(/Popular rank/g, 'Popular')
+    .replace(/New release/g, 'New')
+    .replace(/Chart climb/g, 'Chart')).join(' · ') || (g.genre ?? g.category);
+}
+
 function legacyTopRow(g, i, max) {
   const p = g.platform;
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
@@ -113,7 +122,7 @@ function legacyTopRow(g, i, max) {
     `${g.rank ? ` · Free #${g.rank}` : ''}${g.grossingRank ? ` · Grossing #${g.grossingRank}` : ''}${g.installsLabel ? ` · ${esc(g.installsLabel)}` : ''}`;
   return `<div class="row" data-open="${p}:${esc(g.id)}">
     ${icon(g)}
-    <div><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><div class="meta">${esc(g.genre ?? g.category)} · ${ageStr(g.ageDays)} old${extra}</div>
+    <div><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><div class="meta">${esc(g.genre ?? g.category)} </div><div class="meta"> ${ageStr(g.ageDays)} old${extra}</div>
     <div class="bar"><i style="width:${Math.max(3, w * 100).toFixed(1)}%;background:${COLORS[g.platform]}"></i></div></div>
     <div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[g.platform])}</div>`;
 }
@@ -123,7 +132,7 @@ function topRow(g, i, max) {
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
   const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
   const extra = p === 'poki' ? `${g.rank ? ` · Popular #${g.rank}` : ''}${g.trendingRank ? ` · Trending #${g.trendingRank}` : ''}` : p === 'roblox' ? '' : `${g.rank ? ` · Free #${g.rank}` : ''}${g.grossingRank ? ` · Grossing #${g.grossingRank}` : ''}`;
-  return `<div class="row game-card" data-open="${p}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="game-card-top"><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><span class="game-tag">${esc(g.genre ?? g.category)} · ${ageStr(g.ageDays)}</span></div><div class="game-card-bottom">${icon(g)}<div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[p])}</div></div>`;
+  return `<div class="row game-card" data-open="${p}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="game-card-top"><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><span class="game-tag">${esc(g.genre ?? g.category)}</span><span class="game-tag"> ${ageStr(g.ageDays)}</span></div><div class="game-card-bottom">${icon(g)}<div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[p])}</div></div>`;
 }
 
 function legacyRiseRow(g, i) {
@@ -182,7 +191,7 @@ function overview() {
 }
 
 function riseRow(g, i) {
-  return `<div class="row game-card" data-open="${g.platform}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="game-card-top"><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><span class="game-tag">${esc(g.reasons.slice(0, 2).join(' · ') || (g.genre ?? g.category))}</span></div><div class="game-card-bottom">${icon(g)}<div class="val num" style="color:var(--rise)">${g.risingScore.toFixed(0)}<small>rising score</small></div>${spark(sparkVals(g), 'var(--rise)')}</div></div>`;
+  return `<div class="row game-card" data-open="${g.platform}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="game-card-top"><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><span class="game-tag">${esc(shortRiseReasons(g))}</span></div><div class="game-card-bottom">${icon(g)}<div class="val num" style="color:var(--rise)">${g.risingScore.toFixed(0)}<small>rising score</small></div>${spark(sparkVals(g), 'var(--rise)')}</div></div>`;
 }
 
 function globalGraph() {
