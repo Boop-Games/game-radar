@@ -1,0 +1,57 @@
+{
+  "name": "game-radar",
+  "productName": "Game Radar",
+  "version": "1.0.0",
+  "description": "Tray app that tracks the top and fastest-rising games on Roblox and Poki",
+  "author": "Boop Games",
+  "type": "module",
+  "main": "src/main.mjs",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "collect": "node src/collect.mjs",
+    "app": "electron .",
+    "icon": "node build/make-icon.mjs",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.boopgames.gameradar",
+    "productName": "Game Radar",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Game Radar",
+      "artifactName": "Game-Radar-Setup-${version}.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3"
+  }
+}
