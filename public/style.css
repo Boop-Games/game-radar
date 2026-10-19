@@ -57,6 +57,14 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .report-graph { margin: 18px 0 24px; padding: 14px; background: var(--panel2); border-radius: 12px; }
 .report-graph h2 { margin: 0 0 12px; font-size: 15px; } .graph-row { display: grid; grid-template-columns: minmax(120px, 220px) 1fr 42px; gap: 10px; align-items: center; margin: 8px 0; }
 .graph-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; } .graph-row i { height: 8px; border-radius: 5px; background: var(--rise); display: block; } .graph-row b { text-align: right; font-size: 12px; }
+.global-graph { margin-bottom: 22px; }
+.global-row { display: grid; grid-template-columns: minmax(180px, 330px) 1fr 34px; gap: 12px; align-items: center; padding: 7px 0; }
+.global-name { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.global-name .pill { flex: 0 0 auto; }
+.global-track { height: 9px; background: var(--line); border-radius: 5px; overflow: hidden; }
+.global-track i { display: block; height: 100%; border-radius: 5px; }
+.global-row strong { text-align: right; color: var(--rise); }
+@media (max-width: 560px) { .global-row { grid-template-columns: minmax(130px, 1fr) 1fr 28px; gap: 7px; } .global-name { display: block; } .global-name .pill { margin-right: 5px; } }
 .schedule { display: grid; gap: 8px; margin-bottom: 14px; }
 .schedule > div { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .schedule input { background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 4px; }

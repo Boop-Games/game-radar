@@ -164,7 +164,13 @@ function overview() {
   </div>
   ${block('Top 10', (p) => TOP_SUB[p], (p) => top[p].map((g, i) => topRow(g, i, topMax(p, top[p]))).join(''))}
   ${block('Rising fast', (p) => RISE_SUB[p], (p) => risers(p, 8).map(riseRow).join('') || '<p class="note">No data yet.</p>')}
-  ${block('Common title words', () => 'The most repeated themes in game titles', (p) => `<div class="cloud">${hotWords(p)}</div>`)}`;
+  ${block('Common title words', () => 'The most repeated themes in game titles', (p) => `<div class="cloud">${hotWords(p)}</div>`)}
+  ${globalGraph()}`;
+}
+
+function globalGraph() {
+  const rows = PLATFORMS.flatMap((p) => risers(p, 3).map((g) => ({ ...g, platform: p }))).sort((a, b) => b.risingScore - a.risingScore);
+  return `<section class="card global-graph"><h2>Global rising signal</h2><p class="sub">Top rising games across every tracked platform, on the same 0–100 score scale.</p>${rows.length ? rows.map((g) => `<div class="global-row"><span class="global-name"><b class="pill ${g.platform}">${NAMES[g.platform]}</b>${esc(g.name)}</span><div class="global-track"><i style="width:${Math.max(3, g.risingScore)}%;background:${COLORS[g.platform]}"></i></div><strong>${Math.round(g.risingScore)}</strong></div>`).join('') : '<p class="note">No rising data yet.</p>'}</section>`;
 }
 
 const relTs = (g) => Date.parse(g.created || g.published || g.released) || null;
