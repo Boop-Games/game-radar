@@ -5,7 +5,7 @@ import { collectIos } from './ios.mjs';
 import { collectAndroid } from './android.mjs';
 import { scoreRoblox, scorePoki, scoreMobile } from './scoring.mjs';
 import { computeTerms } from './terms.mjs';
-import { loadHistory, saveHistory, loadLatest, saveLatest, appendHistory } from './store.mjs';
+import { loadHistory, saveHistory, loadLatest, saveLatest, saveSnapshot, appendHistory } from './store.mjs';
 
 const MOBILE_EVERY = (Number(process.env.MOBILE_REFRESH_MINUTES) || 30) * 60e3;
 
@@ -46,7 +46,7 @@ export async function runCollection({ only } = {}) {
   });
   if (SOURCES.every((s) => !snap[s.name])) throw new Error('All sources failed: ' + JSON.stringify(snap.errors));
 
-  await Promise.all([saveHistory(history), saveLatest(snap)]);
+  await Promise.all([saveHistory(history), saveLatest(snap), saveSnapshot(snap, now)]);
   return snap;
 }
 

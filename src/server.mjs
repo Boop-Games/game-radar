@@ -11,6 +11,7 @@ import { loadNewsletterSettings, saveNewsletterSettings, listNewsletters, create
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const pagesDir = () => path.join(process.env.GAME_RADAR_DATA || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data'), 'pages');
+const snapshotsDir = () => path.join(process.env.GAME_RADAR_DATA || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data'), 'snapshots');
 
 // Starts the dashboard server and the background refresh loop.
 // `onAlerts(alerts)` is called when games enter a Top 10; port 0 picks a free port.
@@ -53,6 +54,9 @@ export async function startServer({ port = 4173, host = '127.0.0.1', intervalMs 
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/status') return send(res, 200, status());
     if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
+    if (url.pathname === '/api/snapshots' && req.method === 'GET') {
+      try { return send(res, 200, (await readdir(snapshotsDir())).filter((n) => n.endsWith('.json')).sort().reverse().map((n) => ({ file: n, capturedAt: new Date(Number(n.slice(0, -5))).toISOString() }))); } catch { return send(res, 200, []); }
+    }
     if (url.pathname === '/api/pages' && req.method === 'GET') {
       try {
         const names = (await readdir(pagesDir())).filter((n) => n.endsWith('.json'));
