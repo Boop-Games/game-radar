@@ -102,7 +102,7 @@ function deltaChip(g) {
   return `<span class="chip ${g.rankDelta > 0 ? 'up' : 'dn'}" title="vs ${hrsStr(g.windowHours)} ago">${g.rankDelta > 0 ? '▲' : '▼'} ${Math.abs(g.rankDelta)}</span>`;
 }
 
-function topRow(g, i, max) {
+function legacyTopRow(g, i, max) {
   const p = g.platform;
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
   const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
@@ -112,13 +112,13 @@ function topRow(g, i, max) {
     p === 'poki' ? `${g.rank ? ` · Popular #${g.rank}` : ''}${g.trendingRank ? ` · Trending #${g.trendingRank}` : ''}` :
     `${g.rank ? ` · Free #${g.rank}` : ''}${g.grossingRank ? ` · Grossing #${g.grossingRank}` : ''}${g.installsLabel ? ` · ${esc(g.installsLabel)}` : ''}`;
   return `<div class="row" data-open="${p}:${esc(g.id)}">
-    <div class="rk">${i + 1}</div>${icon(g)}
+    ${icon(g)}
     <div><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><div class="meta">${esc(g.genre ?? g.category)} · ${ageStr(g.ageDays)} old${extra}</div>
     <div class="bar"><i style="width:${Math.max(3, w * 100).toFixed(1)}%;background:${COLORS[g.platform]}"></i></div></div>
     <div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[g.platform])}</div>`;
 }
 
-function legacyTopRow(g, i, max) {
+function topRow(g, i, max) {
   const p = g.platform;
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
   const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
