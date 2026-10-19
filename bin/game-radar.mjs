@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, access } from 'node:fs/promises';
+import { readFile, access, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -13,7 +13,7 @@ async function dataDir(flag) {
   return candidates.at(-1);
 }
 const usage = `Game Radar CLI
-Usage: game-radar <status|top|rising|list|game|search|keywords|refresh|help> [options]
+Usage: game-radar <status|top|rising|list|game|search|keywords|report|refresh|help> [options]
 Platforms: Roblox uses live players; Poki live is bucketed and ties use Popular rank; iOS/Android have no player counts and use Top Free chart rank; Android uses an unofficial Play scraper; all data is US by default.
 JSON fields: position is the platform ordering, risingScore is 0-100, reasons explains the score, hist is raw history with [time, primary, chart rank, extra].
 Options: --data DIR --format json|table|md --json --full --fields a,b,c -n N --limit N`;
@@ -40,5 +40,21 @@ else if (command === 'list') { if (!PLATFORMS.includes(platformArg)) fail('list 
 else if (command === 'search') { const q = platformArg?.toLowerCase() || ''; emit(envelope(PLATFORMS.flatMap(p => (snapshot[p]?.games || []).filter(g => g.name.toLowerCase().includes(q)).map((g,i) => compact({ ...g, platform:p }, i+1))), 'all')); }
 else if (command === 'game') { const p = platformArg, q = argv[2]?.toLowerCase(); const gs = snapshot[p]?.games || []; const hits = gs.filter(g => g.id === q || g.name.toLowerCase().includes(q || '')); if (hits.length !== 1) { fail(hits.length ? `Ambiguous match: ${hits.map(g=>g.name).join(', ')}` : 'Game not found', 2); } else emit(envelope([opts.full ? hits[0] : compact({ ...hits[0], platform:p }, 1)], p)); }
 else if (command === 'keywords') { const ps = selected; const items = ps.flatMap(p => (snapshot[p]?.terms || []).filter(t => opts['no-phrases'] ? !t.phrase : true).slice(0, Number(opts.limit || 25)).map(t => ({ platform:p, ...t }))); emit(envelope(items, platformArg)); }
+else if (command === 'report') {
+  const kind = platformArg || 'popular-not-on-poki';
+  if (kind !== 'popular-not-on-poki') { fail(`Unknown report: ${kind}`, 1); }
+  else {
+    const poki = new Set((snapshot.poki?.games || []).map(g => g.name.toLowerCase().replace(/[^a-z0-9]/g, '')));
+    const sources = ['roblox', 'ios', 'android'];
+    const matches = sources.flatMap(p => (snapshot[p]?.games || []).map(g => ({ ...g, platform: p })).filter(g => !poki.has(g.name.toLowerCase().replace(/[^a-z0-9]/g, ''))).map((g, i) => compact(g, i + 1))).sort((a, b) => (b.playing ?? b.ratings ?? 0) - (a.playing ?? a.ratings ?? 0)).slice(0, Number(opts.limit || 50));
+    const slug = `popular-not-on-poki-${Date.now()}`;
+    const title = 'Popular games not yet on Poki';
+    const lines = [`# ${title}`, '', `Generated ${new Date().toISOString()} from the current Game Radar snapshot.`, '', `Compared ${sources.map(p => LABELS[p]).join(', ')} against ${snapshot.poki?.games?.length || 0} Poki games using normalized exact title matching.`, '', '| Platform | Game | Signal | Link |', '|---|---|---:|---|', ...matches.map(g => `| ${g.platform} | ${g.name.replaceAll('|', '\\|')} | ${g.playing ?? g.rank ?? g.ratings ?? ''} | [Open](${g.url}) |`), '', `**${matches.length} candidates found.** Names may differ across platforms, so review this as a research shortlist.`];
+    const page = { slug, title, kind, createdAt: new Date().toISOString(), snapshotUpdatedAt: snapshot.updatedAt, summary: `${matches.length} popular games found outside Poki`, markdown: lines.join('\n'), items: matches };
+    await mkdir(path.join(dir, 'pages'), { recursive: true });
+    await writeFile(path.join(dir, 'pages', `${slug}.json`), JSON.stringify(page, null, 2));
+    emit(envelope([{ slug, title, createdAt: page.createdAt, summary: page.summary, items: matches }], 'all'));
+  }
+}
 else if (command === 'refresh') { const { runCollection } = await import('../src/collect.mjs'); const only = opts.platform?.split(','); const result = await runCollection({ only }); emit(envelope(PLATFORMS.flatMap(p => [{ platform:p, games: result[p]?.games?.length || 0 }]), 'all')); }
 else fail(`Unknown command: ${command}`, 1);

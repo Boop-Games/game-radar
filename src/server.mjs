@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { runCollection } from './collect.mjs';
@@ -9,6 +9,7 @@ import { PLATFORMS } from './rank.mjs';
 
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const pagesDir = () => path.join(process.env.GAME_RADAR_DATA || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data'), 'pages');
 
 // Starts the dashboard server and the background refresh loop.
 // `onAlerts(alerts)` is called when games enter a Top 10; port 0 picks a free port.
@@ -50,6 +51,17 @@ export async function startServer({ port = 4173, host = '127.0.0.1', intervalMs 
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/status') return send(res, 200, status());
     if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
+    if (url.pathname === '/api/pages' && req.method === 'GET') {
+      try {
+        const names = (await readdir(pagesDir())).filter((n) => n.endsWith('.json'));
+        const pages = await Promise.all(names.map(async (name) => JSON.parse(await readFile(path.join(pagesDir(), name), 'utf8'))));
+        return send(res, 200, pages.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)));
+      } catch { return send(res, 200, []); }
+    }
+    if (url.pathname.startsWith('/api/pages/') && req.method === 'GET') {
+      const slug = url.pathname.slice('/api/pages/'.length).replace(/[^a-z0-9_-]/gi, '');
+      try { return send(res, 200, JSON.parse(await readFile(path.join(pagesDir(), `${slug}.json`), 'utf8'))); } catch { return send(res, 404, { error: 'Page not found' }); }
+    }
     if (url.pathname === '/api/refresh' && req.method === 'POST') {
       refresh();
       return send(res, 202, status());

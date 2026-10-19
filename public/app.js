@@ -17,6 +17,7 @@ const state = {
   limit: perPlatform(50),
   open: null,
   kw: { q: '', sort: 'count', phrases: true, open: new Set(), limit: perPlatform(40) },
+  pages: [],
 };
 
 // ---------- formatting ----------
@@ -230,6 +231,12 @@ function kwView() {
   <div class="cols" id="kwbody">${kwBody()}</div>
   <p class="note">Words come from game titles (a word has to appear in 2+ titles). "Share" is the portion of all live players (Poki's figure is a rounded estimate) held by games with that word; for iOS and Android it is weighted by Top Free chart position. A single mega-hit can dominate share, so also sort by "Most games". "Trending up" compares share with ~24h ago and fills in as history builds.</p>`;
 }
+function pagesView() {
+  const pages = state.pages;
+  if (!pages.length) return `<div class="card"><h2>Research Pages</h2><p class="sub">Reports created by agents through the CLI appear here.</p><p class="note">Example: <code>node bin/game-radar.mjs report popular-not-on-poki</code></p></div>`;
+  const selected = pages.find((p) => p.slug === state.page) || pages[0];
+  return `<div class="pages"><aside class="card page-list"><h2>Research Pages</h2>${pages.map((p) => `<button class="page-link ${p.slug === selected.slug ? 'on' : ''}" data-page="${esc(p.slug)}"><b>${esc(p.title)}</b><span>${esc(p.summary || '')}</span><small>${new Date(p.createdAt).toLocaleString()}</small></button>`).join('')}</aside><article class="card page-body"><h1>${esc(selected.title)}</h1><p class="sub">${esc(selected.summary || '')} · ${new Date(selected.createdAt).toLocaleString()}</p><pre>${esc(selected.markdown || '')}</pre></article></div>`;
+}
 const kwBody = () => PLATFORMS.filter((p) => state.data[p]).map(kwCard).join('');
 const drawKw = () => {
   const b = $('#kwbody');
@@ -366,7 +373,7 @@ function render() {
   } else {
     const errs = Object.entries(d.errors ?? {});
     if (errs.length) html += `<div class="banner">Couldn't update ${errs.map(([k, v]) => `${NAMES[k]} (${esc(v)})`).join(', ')}. Showing the last good data for ${errs.length > 1 ? 'those' : 'it'}.</div>`;
-    html += state.tab === 'keywords' ? kwView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
+    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
   }
   $('#app').innerHTML = html;
   drawTable();
@@ -393,6 +400,7 @@ async function loadData() {
   render();
   paintStatus();
 }
+async function loadPages() { try { state.pages = await (await fetch('/api/pages')).json(); } catch { state.pages = []; } }
 
 async function poll() {
   try {
@@ -400,6 +408,7 @@ async function poll() {
     const changed = !state.data || s.updatedAt !== state.data.updatedAt;
     state.status = s;
     if (changed) await loadData();
+    if (state.tab === 'pages' && !state.pages.length) { await loadPages(); render(); }
     else paintStatus();
   } catch {
     $('#status').innerHTML = '<span class="dot busy"></span>Server unreachable, retrying…';
@@ -417,6 +426,8 @@ document.addEventListener('click', async (e) => {
     closeDrawer();
     return render();
   }
+  const page = t.closest('[data-page]');
+  if (page) { state.page = page.dataset.page; return render(); }
   const open = t.closest('[data-open]');
   if (open) return drawer(open.dataset.open);
   const more = t.closest('[data-more]');
