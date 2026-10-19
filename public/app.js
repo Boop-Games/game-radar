@@ -265,9 +265,26 @@ function kwCard(p) {
     `<div class="cloud">${cloud || '<span class="muted">Nothing matches.</span>'}</div>${rows}${all.length > shown.length ? `<button class="more" data-more="${p}">Show more (${all.length - shown.length} left)</button>` : ''}`);
 }
 
+function keywordSummary() {
+  const terms = new Map();
+  PLATFORMS.forEach((p) => kwList(p).forEach((t) => {
+    if (t.shareDelta == null) return;
+    const item = terms.get(t.term) || { term: t.term, delta: 0, platforms: 0 };
+    item.delta += t.shareDelta;
+    item.platforms++;
+    terms.set(t.term, item);
+  }));
+  const all = [...terms.values()].filter((t) => Math.abs(t.delta) >= 0.01);
+  const rising = all.filter((t) => t.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 10);
+  const falling = all.filter((t) => t.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 10);
+  const list = (items, direction) => items.length ? items.map((t) => `<span class="keyword-signal ${direction}">${esc(t.term)} <b>${direction === 'up' ? '+' : '−'}${Math.abs(Math.round(t.delta * 100))}%</b></span>`).join('') : '<span class="muted">Not enough history yet</span>';
+  return `<section class="card keyword-summary"><div><h2>Keyword momentum</h2><p class="sub">The themes gaining and losing popularity across all platforms.</p></div><div class="keyword-signal-grid"><div class="keyword-signal-group up"><h3>Rising</h3><div class="keyword-signals">${list(rising, 'up')}</div></div><div class="keyword-signal-group down"><h3>Going down</h3><div class="keyword-signals">${list(falling, 'down')}</div></div></div></section>`;
+}
+
 function kwView() {
   const k = state.kw;
   return `
+  ${keywordSummary()}
   <div class="tools">
     <input id="kwq" type="search" placeholder="Search a word or game…" value="${esc(k.q)}">
     <span class="muted">Sort by</span>
