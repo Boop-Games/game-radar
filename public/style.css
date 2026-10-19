@@ -55,6 +55,7 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .overview-platforms .row .meta { position: static; grid-column: 2; grid-row: 2; display: inline-block; width: fit-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 2px 7px; border-radius: 999px; background: var(--panel2); font-size: 10px; line-height: 1.3; }
 .overview-platforms .row .bar { display: none; }
 .overview-platforms .row .val { grid-column: 3; grid-row: 2; align-self: center; }
+.overview-platforms .row > div:nth-child(3) { display: contents; }
 .overview-platforms .row { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) 92px 70px; grid-template-rows: auto; min-height: 60px; padding-top: 30px; }
 .overview-platforms .row > div:nth-child(3) { display: block; grid-column: 2; grid-row: 1; min-width: 0; }
 .overview-platforms .row .nm { position: absolute; top: 7px; left: 54px; right: 180px; display: block; z-index: 1; }
