@@ -53,5 +53,8 @@
   "devDependencies": {
     "electron": "^44.9.0",
     "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "google-play-scraper": "^10.1.4"
   }
 }

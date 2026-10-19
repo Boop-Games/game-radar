@@ -5,6 +5,7 @@ import path from 'node:path';
 import { runCollection } from './collect.mjs';
 import { loadLatest } from './store.mjs';
 import { findAlerts } from './alerts.mjs';
+import { PLATFORMS } from './rank.mjs';
 
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
@@ -48,7 +49,7 @@ export async function startServer({ port = 4173, host = '127.0.0.1', intervalMs 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/status') return send(res, 200, status());
-    if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, roblox: latest?.roblox, poki: latest?.poki });
+    if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
     if (url.pathname === '/api/refresh' && req.method === 'POST') {
       refresh();
       return send(res, 202, status());

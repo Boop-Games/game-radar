@@ -1,42 +1,56 @@
 import { fileURLToPath } from 'node:url';
 import { collectRoblox } from './roblox.mjs';
 import { collectPoki } from './poki.mjs';
-import { scoreRoblox, scorePoki } from './scoring.mjs';
+import { collectIos } from './ios.mjs';
+import { collectAndroid } from './android.mjs';
+import { scoreRoblox, scorePoki, scoreMobile } from './scoring.mjs';
 import { computeTerms } from './terms.mjs';
 import { loadHistory, saveHistory, loadLatest, saveLatest, appendHistory } from './store.mjs';
 
-// Fetch both platforms, score them against stored history and persist a new snapshot.
+const MOBILE_EVERY = (Number(process.env.MOBILE_REFRESH_MINUTES) || 30) * 60e3;
+
+// `every` is how often a platform is re-fetched. Mobile needs one request per app on Google Play and
+// its charts move slowly, so it refreshes less often than Roblox and Poki.
+const SOURCES = [
+  { name: 'roblox', collect: collectRoblox, score: scoreRoblox, every: 0 },
+  { name: 'poki', collect: collectPoki, score: scorePoki, every: 0 },
+  { name: 'ios', collect: collectIos, score: scoreMobile, every: MOBILE_EVERY },
+  { name: 'android', collect: collectAndroid, score: scoreMobile, every: MOBILE_EVERY },
+];
+
+// Fetch the platforms that are due, score them against stored history and persist a new snapshot.
 // If one platform fails, its previous data is kept and flagged so the dashboard still works.
-export async function runCollection() {
+// `only` limits the run to some platforms and ignores the schedule (used by the CLI).
+export async function runCollection({ only } = {}) {
   const now = Date.now();
   const [prev, history] = await Promise.all([loadLatest(), loadHistory()]);
-  const [rb, pk] = await Promise.allSettled([collectRoblox(), collectPoki()]);
+  const due = SOURCES.filter((s) => (only ? only.includes(s.name) : !prev?.[s.name] || now - prev[s.name].updatedAt >= s.every - 5000));
 
-  const snap = { updatedAt: now, errors: {}, roblox: prev?.roblox ?? null, poki: prev?.poki ?? null };
+  const results = await Promise.allSettled(due.map((s) => s.collect()));
+  const snap = { updatedAt: now, errors: {} };
+  for (const s of SOURCES) snap[s.name] = prev?.[s.name] ?? null;
 
-  for (const [name, res, score] of [
-    ['roblox', rb, scoreRoblox],
-    ['poki', pk, scorePoki],
-  ]) {
+  due.forEach((s, i) => {
+    const res = results[i];
     if (res.status === 'fulfilled') {
-      appendHistory(history, name, res.value, now);
-      score(res.value, history, now);
-      const terms = computeTerms(name, res.value, history, now);
-      appendHistory(history, `term:${name}`, [], now); // prune old term samples
+      appendHistory(history, s.name, res.value, now);
+      s.score(res.value, history, now);
+      const terms = computeTerms(s.name, res.value, history, now);
+      appendHistory(history, `term:${s.name}`, [], now); // prune old term samples
       for (const g of res.value) delete g.desc; // only needed for the keyword pass
-      snap[name] = { updatedAt: now, games: res.value, terms };
+      snap[s.name] = { updatedAt: now, games: res.value, terms };
     } else {
-      snap.errors[name] = res.reason?.message ?? String(res.reason);
-      console.warn(`[${name}] collection failed: ${snap.errors[name]}`);
+      snap.errors[s.name] = res.reason?.message ?? String(res.reason);
+      console.warn(`[${s.name}] collection failed: ${snap.errors[s.name]}`);
     }
-  }
-  if (!snap.roblox && !snap.poki) throw new Error('Both sources failed: ' + JSON.stringify(snap.errors));
+  });
+  if (SOURCES.every((s) => !snap[s.name])) throw new Error('All sources failed: ' + JSON.stringify(snap.errors));
 
   await Promise.all([saveHistory(history), saveLatest(snap)]);
   return snap;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const s = await runCollection();
-  console.log(`roblox: ${s.roblox?.games.length ?? 0} games, poki: ${s.poki?.games.length ?? 0} games`);
+  const s = await runCollection({ only: process.argv.slice(2).length ? process.argv.slice(2) : undefined });
+  console.log(SOURCES.map((x) => `${x.name}: ${s[x.name]?.games.length ?? 0}`).join(', '));
 }

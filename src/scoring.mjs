@@ -122,3 +122,63 @@ export function scorePoki(games, history, now) {
     g.hist = thin((hist ?? []).map((p) => [p[0], p[1], p[2], p[3]]));
   }
 }
+
+// iOS and Android: no player counts exist, so popularity is chart position and rising is
+// ratings velocity, chart climb, a New chart appearance (iOS) and install-bucket steps (Android).
+export function scoreMobile(games, history, now) {
+  const rpd = (g) => (g.ageDays == null ? null : g.ratingCount / Math.max(g.ageDays, 7));
+  const maxRpd = Math.max(...games.map((g) => rpd(g) ?? 0), 1);
+  const abbr = (n) => (n >= 1e9 ? `${n / 1e9}B+` : n >= 1e6 ? `${n / 1e6}M+` : n >= 1e3 ? `${n / 1e3}K+` : `${n}+`);
+
+  for (const g of games) {
+    const hist = history[`${g.platform}:${g.id}`];
+    const base = baselineFor(hist, now);
+    const life = rpd(g);
+    g.votesPerDay = life;
+    const freeSize = g.chartSize?.rank || 100;
+
+    let accel = null;
+    let climb = null;
+    let step = null;
+    if (base) {
+      g.windowHours = base.hours;
+      if (base.hours >= 3 && life) {
+        accel = (g.ratingCount - base.v) / (base.hours / 24) / life; // recent ratings/day vs lifetime average
+        g.accel = accel;
+      }
+      if (g.rank && base.rank) {
+        g.rankDelta = base.rank - g.rank; // positive = moved up
+        climb = clamp(g.rankDelta / 20);
+      } else if (g.rank && !base.rank) climb = 0.7; // newly charted
+      if (g.platform === 'android' && base.live > 0 && g.installs > 0) {
+        g.installsStep = g.installs / base.live;
+        step = clamp(g.installsStep - 1); // doubling the install bucket scores 1
+        g.installsBefore = base.live;
+      }
+    }
+
+    const { score, components } = combine([
+      { label: 'Ratings per day since release', weight: 0.25, value: life == null ? null : clamp(Math.log10(life + 1) / Math.log10(maxRpd + 1)) },
+      { label: 'Freshness', weight: 0.15, value: g.ageDays == null ? null : Math.exp(-g.ageDays / 200) },
+      { label: 'Position in the Top Free chart', weight: 0.15, value: g.rank ? 1 - (g.rank - 1) / freeSize : 0 },
+      { label: 'New chart placement', weight: 0.15, value: g.platform === 'ios' ? (g.newRank ? 1 - (g.newRank - 1) / (g.chartSize?.newRank || 100) : 0) : null },
+      { label: 'Climb in the Top Free chart', weight: 0.1, value: climb },
+      { label: 'Rating acceleration', weight: 0.1, value: accel == null ? null : clamp((accel - 1) / 2) },
+      { label: 'Install bucket step (Android)', weight: 0.1, value: step },
+    ]);
+    g.risingScore = score;
+    g.components = components;
+
+    const why = [];
+    if (g.rankDelta >= 3) why.push(`Up ${g.rankDelta} spots in Top Free`);
+    if (g.installsStep > 1) why.push(`Installs ${abbr(g.installsBefore)} to ${abbr(g.installs)}`);
+    if (accel != null && accel >= 1.3) why.push(`Ratings ${accel.toFixed(1)}x faster than average`);
+    if (g.newRank && g.newRank <= 30) why.push(`New chart #${g.newRank}`);
+    if (g.ageDays != null && g.ageDays < 60) why.push(`Released ${Math.max(1, Math.round(g.ageDays))}d ago`);
+    if (life && g.ageDays != null && g.ageDays < 365) why.push(`${Math.round(life).toLocaleString('en-US')} ratings/day`);
+    if (g.rank && g.rank <= 20) why.push(`Top Free #${g.rank}`);
+    if (g.grossingRank && g.grossingRank <= 20) why.push(`Top Grossing #${g.grossingRank}`);
+    g.reasons = why;
+    g.hist = thin((hist ?? []).map((p) => [p[0], p[1], p[2], p[3]]));
+  }
+}

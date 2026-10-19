@@ -1,19 +1,22 @@
 'use strict';
 
 const $ = (s) => document.querySelector(s);
-const COLORS = { roblox: 'var(--roblox)', poki: 'var(--poki)' };
-const NAMES = { roblox: 'Roblox', poki: 'Poki' };
+const PLATFORMS = ['roblox', 'poki', 'ios', 'android'];
+const COLORS = { roblox: 'var(--roblox)', poki: 'var(--poki)', ios: 'var(--ios)', android: 'var(--android)' };
+const NAMES = { roblox: 'Roblox', poki: 'Poki', ios: 'iOS', android: 'Android' };
+const isMobile = (p) => p === 'ios' || p === 'android';
+const perPlatform = (v) => Object.fromEntries(PLATFORMS.map((p) => [p, typeof v === 'function' ? v(p) : v]));
 
 const state = {
   data: null,
   status: null,
   tab: location.hash.slice(1) || 'overview',
-  q: { roblox: '', poki: '' },
-  cat: { roblox: '', poki: '' },
-  sort: { roblox: ['playing', -1], poki: ['live', -1] },
-  limit: { roblox: 50, poki: 50 },
+  q: perPlatform(''),
+  cat: perPlatform(''),
+  sort: { roblox: ['playing', -1], poki: ['live', -1], ios: ['rank', 1], android: ['rank', 1] },
+  limit: perPlatform(50),
   open: null,
-  kw: { q: '', sort: 'count', phrases: true, open: new Set(), limit: { roblox: 40, poki: 40 } },
+  kw: { q: '', sort: 'count', phrases: true, open: new Set(), limit: perPlatform(40) },
 };
 
 // ---------- formatting ----------
@@ -35,11 +38,19 @@ const icon = (g) => `<img class="ic" src="${esc(g.icon || '')}" alt="" loading="
 
 // ---------- derived lists ----------
 const games = (p) => state.data?.[p]?.games ?? [];
-const topList = (p, n = 10) =>
-  p === 'roblox'
-    ? [...games(p)].sort((a, b) => b.playing - a.playing).slice(0, n)
-    : [...games(p)].sort((a, b) => (b.live ?? 0) - (a.live ?? 0) || (a.rank ?? 1e9) - (b.rank ?? 1e9)).slice(0, n); // Poki's live figure is bucketed, so ties fall back to its Popular order
-const topMax = (p, list) => (p === 'roblox' ? list[0]?.playing : Math.max(...list.map((g) => g.live ?? 0))) || 1;
+// Same ordering as src/rank.mjs. Poki's live figure is bucketed, so ties fall back to its Popular order;
+// mobile has no player counts, so it ranks by Top Free chart position.
+const nl = (v) => v ?? 1e9;
+const ORDER = {
+  roblox: (a, b) => b.playing - a.playing,
+  poki: (a, b) => (b.live ?? 0) - (a.live ?? 0) || nl(a.rank) - nl(b.rank),
+  ios: (a, b) => nl(a.rank) - nl(b.rank) || nl(a.grossingRank) - nl(b.grossingRank),
+  android: (a, b) => nl(a.rank) - nl(b.rank) || nl(a.grossingRank) - nl(b.grossingRank),
+};
+const topList = (p, n = 10) => [...games(p)].sort(ORDER[p]).slice(0, n);
+// What the bar under each Top 10 row is scaled against.
+const barValue = (g) => (g.platform === 'roblox' ? g.playing : g.platform === 'poki' ? g.live ?? 0 : g.ratingCount ?? 0);
+const topMax = (p, list) => Math.max(...list.map(barValue), 1);
 const risers = (p, n = 10) => games(p).filter((g) => g.risingScore != null).sort((a, b) => b.risingScore - a.risingScore).slice(0, n);
 
 // ---------- small svg charts ----------
@@ -47,6 +58,7 @@ function sparkVals(g) {
   const h = g.hist ?? [];
   let v;
   if (g.platform === 'roblox') v = h.map((p) => p[1]);
+  else if (isMobile(g.platform)) v = h.filter((p) => p[2]).map((p) => -p[2]); // chart position, up = better
   else {
     v = h.filter((p) => p[3] != null).map((p) => p[3]);
     if (new Set(v).size < 2) v = h.filter((p) => p[2]).map((p) => -p[2]); // live buckets flat: show Popular-list movement instead
@@ -87,14 +99,17 @@ function deltaChip(g) {
 }
 
 function topRow(g, i, max) {
-  const roblox = g.platform === 'roblox';
-  const val = roblox ? full(g.playing) : g.live != null ? `${full(g.live)}+` : '–';
-  const small = roblox ? 'playing now' : 'live (estimate)';
-  const w = (roblox ? g.playing : g.live ?? 0) / max;
-  const extra = roblox ? '' : `${g.rank ? ` · Popular #${g.rank}` : ''}${g.trendingRank ? ` · Trending #${g.trendingRank}` : ''}`;
-  return `<div class="row" data-open="${g.platform}:${esc(g.id)}">
+  const p = g.platform;
+  const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
+  const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
+  const w = barValue(g) / max;
+  const extra =
+    p === 'roblox' ? '' :
+    p === 'poki' ? `${g.rank ? ` · Popular #${g.rank}` : ''}${g.trendingRank ? ` · Trending #${g.trendingRank}` : ''}` :
+    `${g.rank ? ` · Free #${g.rank}` : ''}${g.grossingRank ? ` · Grossing #${g.grossingRank}` : ''}${g.installsLabel ? ` · ${esc(g.installsLabel)}` : ''}`;
+  return `<div class="row" data-open="${p}:${esc(g.id)}">
     <div class="rk">${i + 1}</div>${icon(g)}
-    <div><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><div class="meta">${esc(roblox ? g.genre : g.category)} · ${ageStr(g.ageDays)} old${extra}</div>
+    <div><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><div class="meta">${esc(g.genre ?? g.category)} · ${ageStr(g.ageDays)} old${extra}</div>
     <div class="bar"><i style="width:${Math.max(3, w * 100).toFixed(1)}%;background:${COLORS[g.platform]}"></i></div></div>
     <div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[g.platform])}</div>`;
 }
@@ -109,7 +124,7 @@ function riseRow(g, i) {
 
 function riseCard(g) {
   return `<div class="rcard" data-open="${g.platform}:${esc(g.id)}">
-    <div class="hd">${icon(g)}<div style="min-width:0"><div class="nm">${esc(g.name)}</div><div class="meta">${g.platform === 'roblox' ? `${full(g.playing)} playing` : `${compact(g.ratingCount)} votes`} · ${esc(g.genre ?? g.category)}</div></div>
+    <div class="hd">${icon(g)}<div style="min-width:0"><div class="nm">${esc(g.name)}</div><div class="meta">${g.platform === 'roblox' ? `${full(g.playing)} playing` : `${compact(g.ratingCount)} ${g.platform === 'poki' ? 'votes' : 'ratings'}`} · ${esc(g.genre ?? g.category)}</div></div>
     <div class="score"><b>${g.risingScore.toFixed(0)}</b><small>score</small></div></div>
     <div class="tags">${g.reasons.slice(0, 4).map((r) => `<span class="tag">${esc(r)}</span>`).join('') || '<span class="tag">New to the charts</span>'}</div></div>`;
 }
@@ -118,39 +133,43 @@ const card = (title, sub, pill, body) => `<section class="card"><h2>${title} ${p
 const pill = (p) => `<span class="pill ${p}">${NAMES[p]}</span>`;
 
 // ---------- views ----------
+const TOP_SUB = {
+  roblox: 'By players online right now',
+  poki: "By Poki's live player estimate (rounded, ties by Popular rank)",
+  ios: 'Top Free chart, US App Store',
+  android: 'Top Free chart, US Google Play',
+};
+const RISE_SUB = {
+  roblox: 'Growth, chart placement and freshness combined',
+  poki: "Poki's trending rank, vote velocity and freshness",
+  ios: 'Ratings velocity, chart climb and the New chart',
+  android: 'Ratings velocity, chart climb and install steps',
+};
+
 function overview() {
-  const rb = topList('roblox'), pk = topList('poki');
-  const rr = risers('roblox'), pr = risers('poki');
-  const best = [...rr.slice(0, 1), ...pr.slice(0, 1)].sort((a, b) => b.risingScore - a.risingScore)[0];
-  const rbMax = topMax('roblox', rb), pkMax = topMax('poki', pk);
+  const ps = PLATFORMS.filter((p) => games(p).length);
+  const top = Object.fromEntries(ps.map((p) => [p, topList(p)]));
+  const best = ps.map((p) => risers(p, 1)[0]).filter(Boolean).sort((a, b) => b.risingScore - a.risingScore)[0];
   const totalPlaying = games('roblox').reduce((s, g) => s + g.playing, 0);
+  const sub = { roblox: (g) => `${full(g.playing)} playing now`, poki: (g) => (g.live != null ? `${full(g.live)}+ live players (est.)` : `${compact(g.ratingCount)} votes`), ios: (g) => `${compact(g.ratingCount)} ratings · ★ ${g.ratingValue ?? '–'}`, android: (g) => `${g.installsLabel ?? ''} installs · ★ ${g.ratingValue ?? '–'}` };
+  const block = (title, subFor, bodyFor) => `<div class="cols">${ps.map((p) => card(title, subFor(p), pill(p), bodyFor(p))).join('')}</div>`;
   return `
   <div class="kpis">
-    <div class="kpi"><div class="l">Roblox players (tracked games)</div><div class="v num">${compact(totalPlaying)}</div><div class="s">${games('roblox').length} games across the Top / Trending / Up-and-Coming charts</div></div>
-    <div class="kpi"><div class="l">#1 on Roblox</div><div class="v t">${esc(rb[0]?.name ?? '–')}</div><div class="s">${full(rb[0]?.playing)} playing now</div></div>
-    <div class="kpi"><div class="l">#1 on Poki</div><div class="v t">${esc(pk[0]?.name ?? '–')}</div><div class="s">${pk[0]?.live != null ? full(pk[0].live) + '+ live players (est.)' : compact(pk[0]?.ratingCount) + ' votes'}</div></div>
+    ${games('roblox').length ? `<div class="kpi"><div class="l">Roblox players (tracked)</div><div class="v num">${compact(totalPlaying)}</div><div class="s">${games('roblox').length} games across the Top / Trending / Up-and-Coming charts</div></div>` : ''}
+    ${ps.map((p) => `<div class="kpi"><div class="l">#1 on ${NAMES[p]}</div><div class="v t">${esc(top[p][0]?.name ?? '–')}</div><div class="s">${top[p][0] ? sub[p](top[p][0]) : ''}</div></div>`).join('')}
     <div class="kpi"><div class="l">Hottest riser</div><div class="v t" style="color:var(--rise)">${esc(best?.name ?? '–')}</div><div class="s">${best ? `${NAMES[best.platform]} · score ${best.risingScore.toFixed(0)}` : ''}</div></div>
   </div>
-  <div class="cols">
-    ${card('Top 10', 'By players online right now', pill('roblox'), rb.map((g, i) => topRow(g, i, rbMax)).join(''))}
-    ${card('Top 10', "By Poki's live player estimate (rounded, ties by Popular rank)", pill('poki'), pk.map((g, i) => topRow(g, i, pkMax)).join(''))}
-  </div>
-  <div class="cols">
-    ${card('Common title words', 'Most repeated themes in the games above and below', pill('roblox'), `<div class="cloud">${hotWords('roblox')}</div>`)}
-    ${card('Common title words', 'Most repeated themes in the games above and below', pill('poki'), `<div class="cloud">${hotWords('poki')}</div>`)}
-  </div>
-  <div class="cols">
-    ${card('Rising fast', 'Growth, chart placement and freshness combined', pill('roblox'), rr.slice(0, 8).map(riseRow).join('') || '<p class="note">No data yet.</p>')}
-    ${card('Rising fast', 'Vote velocity, freshness and climb in Popular', pill('poki'), pr.slice(0, 8).map(riseRow).join('') || '<p class="note">No data yet.</p>')}
-  </div>`;
+  ${block('Top 10', (p) => TOP_SUB[p], (p) => top[p].map((g, i) => topRow(g, i, topMax(p, top[p]))).join(''))}
+  ${block('Rising fast', (p) => RISE_SUB[p], (p) => risers(p, 8).map(riseRow).join('') || '<p class="note">No data yet.</p>')}
+  ${block('Common title words', () => 'The most repeated themes in game titles', (p) => `<div class="cloud">${hotWords(p)}</div>`)}`;
 }
 
-const relTs = (g) => Date.parse(g.created || g.published) || null;
+const relTs = (g) => Date.parse(g.created || g.published || g.released) || null;
 const relCell = (g) => {
   const t = relTs(g);
   return t ? `${new Date(t).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' })} <span class="muted">· ${ageStr(g.ageDays)}</span>` : '–';
 };
-const TEXT_COLS = new Set(['name', 'rank', 'trendingRank', 'genre', 'category']); // sort A→Z / 1→N first; everything else biggest/newest first
+const TEXT_COLS = new Set(['name', 'rank', 'trendingRank', 'grossingRank', 'newRank', 'genre', 'category']); // sort A→Z / 1→N first; everything else biggest/newest first
 const dirLabel = (key, dir) => (key === 'released' ? (dir < 0 ? 'Newest first' : 'Oldest first') : TEXT_COLS.has(key) ? (dir > 0 ? 'A → Z / 1st first' : 'Z → A / last first') : dir < 0 ? 'High → Low' : 'Low → High');
 
 // ---------- keyword catalogue ----------
@@ -211,7 +230,7 @@ function kwView() {
   <div class="cols" id="kwbody">${kwBody()}</div>
   <p class="note">Words come from game titles (a word has to appear in 2+ titles). "Share" is the portion of all live players (Poki's figure is a rounded estimate) held by games with that word. A single mega-hit can dominate share, so also sort by "Most games". "Trending up" compares share with ~24h ago and fills in as history builds.</p>`;
 }
-const kwBody = () => ['roblox', 'poki'].filter((p) => state.data[p]).map(kwCard).join('');
+const kwBody = () => PLATFORMS.filter((p) => state.data[p]).map(kwCard).join('');
 const drawKw = () => {
   const b = $('#kwbody');
   if (b) b.innerHTML = kwBody();

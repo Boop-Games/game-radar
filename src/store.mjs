@@ -34,7 +34,8 @@ export function appendHistory(history, platform, games, now) {
     const key = `${platform}:${g.id}`;
     const pts = (history[key] ??= []);
     const v = platform === 'roblox' ? g.playing : g.ratingCount;
-    pts.push([now, v, platform === 'poki' ? g.rank : null, platform === 'poki' ? g.live : null]);
+    // Samples are [time, primary, chart rank, extra]. Extra is Poki's live estimate or Android's install bucket.
+    pts.push([now, v, platform === 'roblox' ? null : g.rank ?? null, g.live ?? g.installs ?? null]);
   }
   for (const key of Object.keys(history)) {
     if (!key.startsWith(platform + ':')) continue;

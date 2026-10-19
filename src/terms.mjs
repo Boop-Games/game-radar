@@ -25,7 +25,8 @@ function grams(text) {
 }
 
 // How much "popularity" a game carries: live players on both platforms (Poki's figure is a rounded estimate).
-const weight = (g) => (g.platform === 'roblox' ? g.playing : g.live ?? 0);
+// Mobile has no player counts, so a game's weight is how high it sits in the Top Free chart.
+const weight = (g) => (g.platform === 'roblox' ? g.playing : g.platform === 'poki' ? g.live ?? 0 : g.rank ? (g.chartSize?.rank || 100) - g.rank + 1 : 0);
 
 export function computeTerms(platform, games, history, now) {
   const total = games.reduce((s, g) => s + weight(g), 0) || 1;
