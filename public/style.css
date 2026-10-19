@@ -46,7 +46,17 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .page-link { text-align: left; background: var(--panel2); border: 1px solid transparent; border-radius: 10px; padding: 10px; display: grid; gap: 3px; color: var(--text); }
 .page-link.on { border-color: var(--rise); }
 .page-link span, .page-link small { color: var(--muted); font-size: 12px; }
-.page-body pre { white-space: pre-wrap; font: 13px/1.6 system-ui, sans-serif; color: var(--text); }
+.page-body { overflow: hidden; }
+.report-content { color: var(--text); line-height: 1.6; }
+.report-content h1, .report-content h2, .report-content h3 { margin: 22px 0 8px; }
+.report-content h1 { font-size: 24px; } .report-content h2 { font-size: 18px; color: var(--text); } .report-content h3 { font-size: 15px; color: var(--muted); }
+.report-content p { margin: 10px 0; } .report-content ul { margin: 8px 0 16px; padding-left: 22px; }
+.report-content a { color: var(--poki); } .report-content strong { color: var(--text); }
+.report-table { overflow-x: auto; margin: 12px 0 20px; } .report-table table { min-width: 520px; }
+.report-table th { position: static; background: var(--panel2); color: var(--text); } .report-table td, .report-table th { padding: 9px 12px; }
+.report-graph { margin: 18px 0 24px; padding: 14px; background: var(--panel2); border-radius: 12px; }
+.report-graph h2 { margin: 0 0 12px; font-size: 15px; } .graph-row { display: grid; grid-template-columns: minmax(120px, 220px) 1fr 42px; gap: 10px; align-items: center; margin: 8px 0; }
+.graph-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; } .graph-row i { height: 8px; border-radius: 5px; background: var(--rise); display: block; } .graph-row b { text-align: right; font-size: 12px; }
 .schedule { display: grid; gap: 8px; margin-bottom: 14px; }
 .schedule > div { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .schedule input { background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 4px; }
