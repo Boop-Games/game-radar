@@ -45,8 +45,7 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .platform-toggle:hover, .platform-toggle.on { color: var(--text); background: var(--panel2); border-color: var(--rise); }
 .overview-platforms { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; margin-bottom: 22px; }
 .overview-platforms .card { padding: 14px; }
-.game-card { display: block; padding: 8px 6px; min-height: 0; }
-.overview-platforms .game-card { display: block !important; }
+.game-card { display: block !important; width: 100%; padding: 8px 6px; min-height: 0; }
 .game-card .rk { display: none; }
 .game-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; margin-bottom: 7px; }
 .game-card-top .nm { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
