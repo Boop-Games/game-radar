@@ -437,6 +437,8 @@ function closeDrawer() {
 function render() {
   const y = window.scrollY;
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === state.tab));
+  const platformSelect = document.querySelector('#platform-select');
+  if (platformSelect) platformSelect.value = PLATFORMS.includes(state.tab) ? state.tab : 'roblox';
   const d = state.data;
   let html = '';
   if (!d?.updatedAt || (!d.roblox && !d.poki)) {
@@ -570,6 +572,12 @@ document.addEventListener('input', (e) => {
   }
 });
 document.addEventListener('change', (e) => {
+  if (e.target.id === 'platform-select') {
+    state.tab = e.target.value;
+    location.hash = state.tab;
+    closeDrawer();
+    render();
+  }
   if (e.target.id === 'newsletter-enabled') { state.newsletterSettings.enabled = e.target.checked; saveNewsletterSettings(); }
   if (e.target.id === 'kwsort') {
     state.kw.sort = e.target.value;
