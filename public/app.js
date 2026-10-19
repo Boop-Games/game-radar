@@ -118,7 +118,7 @@ function topRow(g, i, max) {
     <div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[g.platform])}</div>`;
 }
 
-function topRow(g, i, max) {
+function legacyTopRow(g, i, max) {
   const p = g.platform;
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
   const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
