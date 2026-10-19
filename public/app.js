@@ -123,7 +123,7 @@ function legacyTopRow(g, i, max) {
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
   const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
   const extra = p === 'poki' ? `${g.rank ? ` · Popular #${g.rank}` : ''}${g.trendingRank ? ` · Trending #${g.trendingRank}` : ''}` : p === 'roblox' ? '' : `${g.rank ? ` · Free #${g.rank}` : ''}${g.grossingRank ? ` · Grossing #${g.grossingRank}` : ''}`;
-  return `<div class="row" data-open="${p}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="ov-name nm">${esc(g.name)} ${deltaChip(g)}</div>${icon(g)}<div class="ov-meta meta">${esc(g.genre ?? g.category)} · ${ageStr(g.ageDays)} old${extra}</div><div class="bar"><i style="width:${Math.max(3, barValue(g) / max * 100).toFixed(1)}%;background:${COLORS[p]}"></i></div><div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[p])}</div>`;
+  return `<div class="row" data-open="${p}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="ov-name nm">${esc(g.name)} ${deltaChip(g)}</div>${icon(g)}<div class="ov-meta meta">${esc(g.genre ?? g.category)} · ${ageStr(g.ageDays)}</div><div class="bar"><i style="width:${Math.max(3, barValue(g) / max * 100).toFixed(1)}%;background:${COLORS[p]}"></i></div><div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[p])}</div>`;
 }
 
 function riseRow(g, i) {
