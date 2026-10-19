@@ -60,6 +60,8 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .global-graph { margin-bottom: 22px; }
 .global-row { display: grid; grid-template-columns: minmax(180px, 330px) 1fr 34px; gap: 12px; align-items: center; padding: 7px 0; }
 .global-name { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.global-name .ic { width: 32px; height: 32px; border-radius: 7px; flex: 0 0 auto; }
+.global-title { overflow: hidden; text-overflow: ellipsis; }
 .global-name .pill { flex: 0 0 auto; }
 .global-track { height: 9px; background: var(--line); border-radius: 5px; overflow: hidden; }
 .global-track i { display: block; height: 100%; border-radius: 5px; }

@@ -157,6 +157,7 @@ function overview() {
   const sub = { roblox: (g) => `${full(g.playing)} playing now`, poki: (g) => (g.live != null ? `${full(g.live)}+ live players (est.)` : `${compact(g.ratingCount)} votes`), ios: (g) => `${compact(g.ratingCount)} ratings · ★ ${g.ratingValue ?? '–'}`, android: (g) => `${g.installsLabel ?? ''} installs · ★ ${g.ratingValue ?? '–'}` };
   const block = (title, subFor, bodyFor) => `<div class="cols">${ps.map((p) => card(title, subFor(p), pill(p), bodyFor(p))).join('')}</div>`;
   return `
+  ${globalGraph()}
   <div class="kpis">
     ${games('roblox').length ? `<div class="kpi"><div class="l">Roblox players (tracked)</div><div class="v num">${compact(totalPlaying)}</div><div class="s">${games('roblox').length} games across the Top / Trending / Up-and-Coming charts</div></div>` : ''}
     ${ps.map((p) => `<div class="kpi"><div class="l">#1 on ${NAMES[p]}</div><div class="v t">${esc(top[p][0]?.name ?? '–')}</div><div class="s">${top[p][0] ? sub[p](top[p][0]) : ''}</div></div>`).join('')}
@@ -165,12 +166,12 @@ function overview() {
   ${block('Top 10', (p) => TOP_SUB[p], (p) => top[p].map((g, i) => topRow(g, i, topMax(p, top[p]))).join(''))}
   ${block('Rising fast', (p) => RISE_SUB[p], (p) => risers(p, 8).map(riseRow).join('') || '<p class="note">No data yet.</p>')}
   ${block('Common title words', () => 'The most repeated themes in game titles', (p) => `<div class="cloud">${hotWords(p)}</div>`)}
-  ${globalGraph()}`;
+  `;
 }
 
 function globalGraph() {
   const rows = PLATFORMS.flatMap((p) => risers(p, 3).map((g) => ({ ...g, platform: p }))).sort((a, b) => b.risingScore - a.risingScore);
-  return `<section class="card global-graph"><h2>Global rising signal</h2><p class="sub">Top rising games across every tracked platform, on the same 0–100 score scale.</p>${rows.length ? rows.map((g) => `<div class="global-row"><span class="global-name"><b class="pill ${g.platform}">${NAMES[g.platform]}</b>${esc(g.name)}</span><div class="global-track"><i style="width:${Math.max(3, g.risingScore)}%;background:${COLORS[g.platform]}"></i></div><strong>${Math.round(g.risingScore)}</strong></div>`).join('') : '<p class="note">No rising data yet.</p>'}</section>`;
+  return `<section class="card global-graph"><h2>Global rising signal</h2><p class="sub">Top rising games across every tracked platform, on the same 0–100 score scale.</p>${rows.length ? rows.map((g) => `<div class="global-row"><span class="global-name">${icon(g)}<b class="pill ${g.platform}">${NAMES[g.platform]}</b><span class="global-title">${esc(g.name)}</span></span><div class="global-track"><i style="width:${Math.max(3, g.risingScore)}%;background:${COLORS[g.platform]}"></i></div><strong>${Math.round(g.risingScore)}</strong></div>`).join('') : '<p class="note">No rising data yet.</p>'}</section>`;
 }
 
 const relTs = (g) => Date.parse(g.created || g.published || g.released) || null;
