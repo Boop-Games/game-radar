@@ -158,6 +158,7 @@ function overview() {
   const block = (title, subFor, bodyFor) => `<div class="cols">${ps.map((p) => card(title, subFor(p), pill(p), bodyFor(p))).join('')}</div>`;
   return `
   ${globalGraph()}
+  ${genreGraph()}
   <div class="kpis">
     ${games('roblox').length ? `<div class="kpi"><div class="l">Roblox players (tracked)</div><div class="v num">${compact(totalPlaying)}</div><div class="s">${games('roblox').length} games across the Top / Trending / Up-and-Coming charts</div></div>` : ''}
     ${ps.map((p) => `<div class="kpi"><div class="l">#1 on ${NAMES[p]}</div><div class="v t">${esc(top[p][0]?.name ?? '–')}</div><div class="s">${top[p][0] ? sub[p](top[p][0]) : ''}</div></div>`).join('')}
