@@ -47,6 +47,9 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .page-link.on { border-color: var(--rise); }
 .page-link span, .page-link small { color: var(--muted); font-size: 12px; }
 .page-body pre { white-space: pre-wrap; font: 13px/1.6 system-ui, sans-serif; color: var(--text); }
+.schedule { display: grid; gap: 8px; margin-bottom: 14px; }
+.schedule > div { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.schedule input { background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 4px; }
 .card h2 { margin: 0 0 2px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
 .card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 12px; }
 .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }

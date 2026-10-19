@@ -18,6 +18,8 @@ const state = {
   open: null,
   kw: { q: '', sort: 'count', phrases: true, open: new Set(), limit: perPlatform(40) },
   pages: [],
+  newsletters: [],
+  newsletterSettings: { times: ['09:00', '13:00', '17:00'], enabled: true },
 };
 
 // ---------- formatting ----------
@@ -237,6 +239,11 @@ function pagesView() {
   const selected = pages.find((p) => p.slug === state.page) || pages[0];
   return `<div class="pages"><aside class="card page-list"><h2>Research Pages</h2>${pages.map((p) => `<button class="page-link ${p.slug === selected.slug ? 'on' : ''}" data-page="${esc(p.slug)}"><b>${esc(p.title)}</b><span>${esc(p.summary || '')}</span><small>${new Date(p.createdAt).toLocaleString()}</small></button>`).join('')}</aside><article class="card page-body"><h1>${esc(selected.title)}</h1><p class="sub">${esc(selected.summary || '')} · ${new Date(selected.createdAt).toLocaleString()}</p><pre>${esc(selected.markdown || '')}</pre></article></div>`;
 }
+function newsletterView() {
+  const editions = state.newsletters;
+  const selected = editions.find((p) => p.slug === state.newsletter) || editions[0];
+  return `<div class="tools"><button class="btn" id="run-newsletter">Create report now</button><label class="muted"><input type="checkbox" id="newsletter-enabled" ${state.newsletterSettings.enabled ? 'checked' : ''}> Scheduled reports</label><span class="muted">Runs at local time; opening later catches up the latest missed slot.</span></div><div class="card schedule"><b>Report times</b><div>${state.newsletterSettings.times.map((t) => `<button class="tag schedule-time" data-time="${t}">${t} ×</button>`).join('')}<input id="new-newsletter-time" type="time"><button class="btn2" id="add-newsletter-time">Add time</button></div></div>${selected ? `<div class="card page-body"><h1>${esc(selected.title)}</h1><p class="sub">${esc(selected.summary || '')} · ${new Date(selected.createdAt).toLocaleString()}</p><pre>${esc(selected.markdown || '')}</pre></div>` : '<div class="card"><h2>No newsletter editions yet</h2><p class="note">Create one now or wait for the next scheduled time.</p></div>'}<div class="card"><h2>Previous editions</h2>${editions.map((p) => `<button class="page-link ${p.slug === selected?.slug ? 'on' : ''}" data-newsletter="${esc(p.slug)}"><b>${esc(p.title)}</b><small>${new Date(p.createdAt).toLocaleString()}</small></button>`).join('')}</div>`;
+}
 const kwBody = () => PLATFORMS.filter((p) => state.data[p]).map(kwCard).join('');
 const drawKw = () => {
   const b = $('#kwbody');
@@ -373,7 +380,7 @@ function render() {
   } else {
     const errs = Object.entries(d.errors ?? {});
     if (errs.length) html += `<div class="banner">Couldn't update ${errs.map(([k, v]) => `${NAMES[k]} (${esc(v)})`).join(', ')}. Showing the last good data for ${errs.length > 1 ? 'those' : 'it'}.</div>`;
-    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
+    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
   }
   $('#app').innerHTML = html;
   drawTable();
@@ -400,7 +407,7 @@ async function loadData() {
   render();
   paintStatus();
 }
-async function loadPages() { try { state.pages = await (await fetch('/api/pages')).json(); } catch { state.pages = []; } }
+async function loadPages() { try { state.pages = await (await fetch('/api/pages')).json(); state.newsletters = await (await fetch('/api/newsletters')).json(); state.newsletterSettings = await (await fetch('/api/newsletter-settings')).json(); } catch { state.pages = []; state.newsletters = []; } }
 
 async function poll() {
   try {
@@ -408,7 +415,7 @@ async function poll() {
     const changed = !state.data || s.updatedAt !== state.data.updatedAt;
     state.status = s;
     if (changed) await loadData();
-    if (state.tab === 'pages' && !state.pages.length) { await loadPages(); render(); }
+    if ((state.tab === 'pages' && !state.pages.length) || (state.tab === 'newsletter' && !state.newsletters.length)) { await loadPages(); render(); }
     else paintStatus();
   } catch {
     $('#status').innerHTML = '<span class="dot busy"></span>Server unreachable, retrying…';
@@ -428,6 +435,11 @@ document.addEventListener('click', async (e) => {
   }
   const page = t.closest('[data-page]');
   if (page) { state.page = page.dataset.page; return render(); }
+  const newsletter = t.closest('[data-newsletter]');
+  if (newsletter) { state.newsletter = newsletter.dataset.newsletter; return render(); }
+  if (t.id === 'run-newsletter') { await fetch('/api/newsletter', { method: 'POST' }); await loadPages(); return render(); }
+  if (t.id === 'add-newsletter-time') { const input = $('#new-newsletter-time'); if (input.value) { state.newsletterSettings.times = [...new Set([...state.newsletterSettings.times, input.value])].sort(); await saveNewsletterSettings(); return render(); } }
+  if (t.classList.contains('schedule-time')) { state.newsletterSettings.times = state.newsletterSettings.times.filter((x) => x !== t.dataset.time); await saveNewsletterSettings(); return render(); }
   const open = t.closest('[data-open]');
   if (open) return drawer(open.dataset.open);
   const more = t.closest('[data-more]');
@@ -487,6 +499,7 @@ document.addEventListener('input', (e) => {
   }
 });
 document.addEventListener('change', (e) => {
+  if (e.target.id === 'newsletter-enabled') { state.newsletterSettings.enabled = e.target.checked; saveNewsletterSettings(); }
   if (e.target.id === 'kwsort') {
     state.kw.sort = e.target.value;
     drawKw();
@@ -501,6 +514,7 @@ document.addEventListener('change', (e) => {
     drawTable();
   }
 });
+async function saveNewsletterSettings() { await fetch('/api/newsletter-settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(state.newsletterSettings) }); }
 document.addEventListener('keydown', (e) => e.key === 'Escape' && closeDrawer());
 window.addEventListener('hashchange', () => {
   state.tab = location.hash.slice(1) || 'overview';

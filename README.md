@@ -42,6 +42,10 @@ Run `node bin/game-radar.mjs help` or read [AGENTS.md](AGENTS.md). It reads `lat
 
 ## Layout
 
+## Newsletter
+
+The **Newsletter** tab contains editions covering new and rising games across all platforms. Scheduled editions default to 09:00, 13:00, and 17:00 local time. Times can be added, removed, or disabled in the tab; **Create report now** generates an on-demand edition. If the app starts after a scheduled time, it creates the latest missed edition—for example, opening at 10:00 creates the 09:00 report—and never duplicates an edition for the same slot.
+
 - `src/roblox.mjs`, `src/poki.mjs`: collectors
 - `src/scoring.mjs`, `src/terms.mjs`, `src/alerts.mjs`: rising score, keyword catalogue, top-10 change detection
 - `src/server.mjs`: local API and background refresh loop; `src/main.mjs`: Electron window, tray and notifications
