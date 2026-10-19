@@ -104,6 +104,8 @@ function deltaChip(g) {
 
 function shortRiseReasons(g) {
   const reasons = (g.reasons || []).slice(0, 2).map((reason) => reason
+    .replace(/^Poki Trending #(\d+)/, '#$1')
+    .replace(/^Live players (\S+).*/, 'Players $1')
     .replace(/ ratings\/day/g, '/day')
     .replace(/Trending rank/g, 'Trending')
     .replace(/Popular rank/g, 'Popular')
