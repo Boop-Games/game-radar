@@ -38,7 +38,7 @@ Environment for `npm start`: `PORT` (default 4173), `REFRESH_MINUTES` (default 5
 
 ## Agent CLI
 
-Run `node bin/game-radar.mjs help` or read [AGENTS.md](AGENTS.md). It reads `latest.json` directly and supports `status`, `top`, `rising`, `list`, `game`, `search`, `keywords`, and `refresh`, with JSON/table/Markdown output.
+Run `node bin/game-radar.mjs help` or read [AGENTS.md](AGENTS.md). It reads `latest.json` directly and supports `status`, `top`, `rising`, `list`, `game`, `search`, `keywords`, `report`, and `refresh`, with JSON/table/Markdown output. `report popular-not-on-poki` creates a report that appears in the dashboard’s Pages tab.
 
 ## Layout
 
