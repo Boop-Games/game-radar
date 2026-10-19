@@ -379,10 +379,8 @@ function platformView(p) {
   return `
   <div class="cols">
     ${card('Top 10', p === 'roblox' ? 'By players online right now' : 'By live player estimate, ties by Popular rank', pill(p), top.map((g, i) => topRow(g, i, max)).join(''))}
-    ${card('Rising fast', 'Highest rising score', pill(p), rr.slice(0, 6).map(riseRow).join(''))}
+    ${card('Rising fast', 'Highest rising score', pill(p), rr.map(riseRow).join(''))}
   </div>
-  <h3 class="section">More risers to watch</h3>
-  <div class="grid">${rr.slice(6, 12).map(riseCard).join('')}</div>
   <h3 class="section">All ${NAMES[p]} games <span class="muted" style="font-weight:400;font-size:13px">(${games(p).length})</span></h3>
   <div class="tools">
     <input id="q" type="search" placeholder="Search games…" value="${esc(state.q[p])}">
