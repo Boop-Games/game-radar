@@ -20,6 +20,7 @@ const state = {
   pages: [],
   newsletters: [],
   newsletterSettings: { times: ['09:00', '13:00', '17:00'], enabled: true },
+  overviewPlatforms: new Set(PLATFORMS),
 };
 
 // ---------- formatting ----------
@@ -151,14 +152,16 @@ const RISE_SUB = {
 
 function overview() {
   const ps = PLATFORMS.filter((p) => games(p).length);
+  const visible = ps.filter((p) => state.overviewPlatforms.has(p));
   const top = Object.fromEntries(ps.map((p) => [p, topList(p)]));
   const best = ps.map((p) => risers(p, 1)[0]).filter(Boolean).sort((a, b) => b.risingScore - a.risingScore)[0];
   const totalPlaying = games('roblox').reduce((s, g) => s + g.playing, 0);
   const sub = { roblox: (g) => `${full(g.playing)} playing now`, poki: (g) => (g.live != null ? `${full(g.live)}+ live players (est.)` : `${compact(g.ratingCount)} votes`), ios: (g) => `${compact(g.ratingCount)} ratings · ★ ${g.ratingValue ?? '–'}`, android: (g) => `${g.installsLabel ?? ''} installs · ★ ${g.ratingValue ?? '–'}` };
-  const block = (title, subFor, bodyFor) => `<div class="cols">${ps.map((p) => card(title, subFor(p), pill(p), bodyFor(p))).join('')}</div>`;
+  const block = (title, subFor, bodyFor) => `<div class="overview-platforms">${visible.map((p) => card(title, subFor(p), pill(p), bodyFor(p))).join('') || '<p class="note">Select at least one platform.</p>'}</div>`;
   return `
   ${globalGraph()}
   ${genreGraph()}
+  <div class="overview-filter"><span class="muted">Platforms</span>${ps.map((p) => `<button class="platform-toggle ${state.overviewPlatforms.has(p) ? 'on' : ''}" data-overview-platform="${p}">${NAMES[p]}</button>`).join('')}</div>
   <div class="kpis">
     ${games('roblox').length ? `<div class="kpi"><div class="l">Roblox players (tracked)</div><div class="v num">${compact(totalPlaying)}</div><div class="s">${games('roblox').length} games across the Top / Trending / Up-and-Coming charts</div></div>` : ''}
     ${ps.map((p) => `<div class="kpi"><div class="l">#1 on ${NAMES[p]}</div><div class="v t">${esc(top[p][0]?.name ?? '–')}</div><div class="s">${top[p][0] ? sub[p](top[p][0]) : ''}</div></div>`).join('')}
@@ -459,6 +462,13 @@ document.addEventListener('click', async (e) => {
     state.tab = tab.dataset.tab;
     location.hash = state.tab;
     closeDrawer();
+    return render();
+  }
+  const overviewPlatform = t.closest('[data-overview-platform]');
+  if (overviewPlatform) {
+    const p = overviewPlatform.dataset.overviewPlatform;
+    if (state.overviewPlatforms.has(p) && state.overviewPlatforms.size > 1) state.overviewPlatforms.delete(p);
+    else state.overviewPlatforms.add(p);
     return render();
   }
   const page = t.closest('[data-page]');
