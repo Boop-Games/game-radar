@@ -49,6 +49,7 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .game-card .rk { display: none; }
 .game-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; margin-bottom: 7px; }
 .game-card-top .nm { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game-tags { display: flex; flex: 0 1 auto; gap: 4px; min-width: 0; max-width: 45%; }
 .game-tag { flex: 0 1 auto; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 7px; border-radius: 999px; background: var(--panel2); color: var(--muted); font-size: 10px; }
 .game-card-bottom { display: grid; grid-template-columns: 44px minmax(0, 1fr) 70px; gap: 10px; align-items: center; }
 .game-card-bottom .ic { grid-column: 1; }
