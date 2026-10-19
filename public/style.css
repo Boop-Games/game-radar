@@ -43,7 +43,7 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .overview-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0 0 12px; }
 .platform-toggle { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 999px; padding: 5px 12px; font-weight: 700; }
 .platform-toggle:hover, .platform-toggle.on { color: var(--text); background: var(--panel2); border-color: var(--rise); }
-.overview-platforms { display: grid; grid-template-columns: repeat(4, minmax(270px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.overview-platforms { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; margin-bottom: 22px; }
 .overview-platforms .card { padding: 14px; }
 .overview-platforms .rk { display: none; }
 .overview-platforms .row { grid-template-columns: 44px minmax(0, 1fr) 92px; grid-template-rows: auto auto 4px; gap: 6px 10px; padding-left: 0; padding-right: 0; }
