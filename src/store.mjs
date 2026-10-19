@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename, readdir, unlink } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -28,13 +28,30 @@ export const saveHistory = (h) => writeJson('history.json', h);
 export const loadLatest = () => readJson('latest.json', null);
 export const saveLatest = (s) => writeJson('latest.json', s);
 
+// Keep complete point-in-time snapshots separately from latest.json. This preserves every
+// collected field for multi-day analysis while pruning old captures to a bounded window.
+export async function saveSnapshot(s, now = Date.now()) {
+  const dir = path.join(DIR(), 'snapshots');
+  await mkdir(dir, { recursive: true });
+  const d = new Date(now);
+  const stamp = `${now}`;
+  await writeFile(path.join(dir, `${stamp}.json`), JSON.stringify(s));
+  const names = (await readdir(dir)).filter((n) => n.endsWith('.json')).sort();
+  const cutoff = now - 30 * 86400e3;
+  await Promise.all(names.map(async (name) => {
+    const time = Number(name.slice(0, -5));
+    if (Number.isFinite(time) && time < cutoff) await unlink(path.join(dir, name)).catch(() => {});
+  }));
+}
+
 // Append a sample [t, value, rank] for each game, then prune old / dense points.
 export function appendHistory(history, platform, games, now) {
   for (const g of games) {
     const key = `${platform}:${g.id}`;
     const pts = (history[key] ??= []);
     const v = platform === 'roblox' ? g.playing : g.ratingCount;
-    pts.push([now, v, platform === 'poki' ? g.rank : null, platform === 'poki' ? g.live : null]);
+    // Samples are [time, primary, chart rank, extra]. Extra is Poki's live estimate or Android's install bucket.
+    pts.push([now, v, platform === 'roblox' ? null : g.rank ?? null, g.live ?? g.installs ?? null]);
   }
   for (const key of Object.keys(history)) {
     if (!key.startsWith(platform + ':')) continue;

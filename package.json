@@ -1,11 +1,14 @@
 {
   "name": "game-radar",
   "productName": "Game Radar",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "Tray app that tracks the top and fastest-rising games on Roblox and Poki",
   "author": "Boop Games",
   "type": "module",
   "main": "src/main.mjs",
+  "bin": {
+    "game-radar": "bin/game-radar.mjs"
+  },
   "private": true,
   "engines": {
     "node": ">=20"
@@ -53,5 +56,8 @@
   "devDependencies": {
     "electron": "^44.9.0",
     "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "google-play-scraper": "^10.1.4"
   }
 }
