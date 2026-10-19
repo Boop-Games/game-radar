@@ -369,7 +369,7 @@ const COLS = {
 };
 
 function platformView(p) {
-  const rr = risers(p, 12), top = topList(p);
+  const rr = risers(p, 10), top = topList(p);
   const max = topMax(p, top);
   const cats = [...new Set(games(p).map((g) => g.genre ?? g.category))].filter(Boolean).sort();
   const blurb =
