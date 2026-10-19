@@ -75,6 +75,16 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .overview-platforms .row .val { grid-column: 4; grid-row: 2; }
 .overview-platforms .row .spark { grid-column: 5; grid-row: 2; }
 .overview-platforms .row { position: relative; }
+.game-card { display: block; padding: 8px 6px; min-height: 0; }
+.game-card .rk { display: none; }
+.game-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; margin-bottom: 7px; }
+.game-card-top .nm { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game-tag { flex: 0 1 auto; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 7px; border-radius: 999px; background: var(--panel2); color: var(--muted); font-size: 10px; }
+.game-card-bottom { display: grid; grid-template-columns: 44px minmax(0, 1fr) 70px; gap: 10px; align-items: center; }
+.game-card-bottom .ic { grid-column: 1; }
+.game-card-bottom .val { grid-column: 2; text-align: left; }
+.game-card-bottom .spark { grid-column: 3; justify-self: end; }
+.game-card .bar { display: none; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; }
 .pages { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 22px; }
 .page-list { display: grid; align-content: start; gap: 8px; }
@@ -216,6 +226,9 @@ td .g span { max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
   .overview-platforms .row .meta { position: static; padding: 0; background: none; font-size: 12px; }
   .overview-platforms .row .ic { grid-column: 1; grid-row: 2; }
   .overview-platforms .row .val { grid-column: 3; grid-row: 2; }
+  .game-card-bottom { grid-template-columns: 38px minmax(0, 1fr) 0; }
+  .game-card-bottom .spark { display: none; }
+  .game-tag { max-width: 42%; }
   .overview-platforms .row .ov-name { grid-column: 1 / span 2; grid-row: 1; }
   .overview-platforms .row .ov-meta { grid-column: 2; grid-row: 2; }
   .overview-platforms .row .ic { grid-column: 1; grid-row: 2; }

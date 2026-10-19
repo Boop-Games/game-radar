@@ -123,10 +123,10 @@ function legacyTopRow(g, i, max) {
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
   const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
   const extra = p === 'poki' ? `${g.rank ? ` · Popular #${g.rank}` : ''}${g.trendingRank ? ` · Trending #${g.trendingRank}` : ''}` : p === 'roblox' ? '' : `${g.rank ? ` · Free #${g.rank}` : ''}${g.grossingRank ? ` · Grossing #${g.grossingRank}` : ''}`;
-  return `<div class="row" data-open="${p}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="ov-name nm" style="grid-column:1 / span 2;grid-row:1">${esc(g.name)} ${deltaChip(g)}</div>${icon(g)}<div class="ov-meta meta" style="position:absolute;top:2px;right:0;max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 6px;border-radius:999px;background:var(--panel2);font-size:10px">${esc(g.genre ?? g.category)} · ${ageStr(g.ageDays)}</div><div class="bar"><i style="width:${Math.max(3, barValue(g) / max * 100).toFixed(1)}%;background:${COLORS[p]}"></i></div><div class="val num" style="grid-column:4;grid-row:2">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[p])}</div>`;
+  return `<div class="row game-card" data-open="${p}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="game-card-top"><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><span class="game-tag">${esc(g.genre ?? g.category)} · ${ageStr(g.ageDays)}</span></div><div class="game-card-bottom">${icon(g)}<div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[p])}</div></div>`;
 }
 
-function riseRow(g, i) {
+function legacyRiseRow(g, i) {
   return `<div class="row" data-open="${g.platform}:${esc(g.id)}">
     <div class="rk">${i + 1}</div>${icon(g)}
     <div><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><div class="meta">${esc(g.reasons.slice(0, 2).join(' · ') || (g.genre ?? g.category))}</div>
@@ -179,6 +179,10 @@ function overview() {
   ${block('Rising fast', (p) => RISE_SUB[p], (p) => risers(p, 8).map(riseRow).join('') || '<p class="note">No data yet.</p>')}
   ${block('Common title words', () => 'The most repeated themes in game titles', (p) => `<div class="cloud">${hotWords(p)}</div>`)}
   `;
+}
+
+function riseRow(g, i) {
+  return `<div class="row game-card" data-open="${g.platform}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="game-card-top"><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><span class="game-tag">${esc(g.reasons.slice(0, 2).join(' · ') || (g.genre ?? g.category))}</span></div><div class="game-card-bottom">${icon(g)}<div class="val num" style="color:var(--rise)">${g.risingScore.toFixed(0)}<small>rising score</small></div>${spark(sparkVals(g), 'var(--rise)')}</div></div>`;
 }
 
 function globalGraph() {
