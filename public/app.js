@@ -259,7 +259,7 @@ function genreGraph() {
   const rows = [...groups.values()].map((x) => ({ ...x, score: x.scores.length ? x.scores.reduce((a, b) => a + b, 0) / x.scores.length : 0 })).sort((a, b) => b.score - a.score || b.count - a.count).slice(0, 10);
   if (!rows.length) return '';
   const max = Math.max(...rows.map((x) => x.score), 1);
-  return `<section class="report-graph genre-graph"><h2>Best-performing genres</h2><p class="sub">Average rising score across all tracked games, with the number of games in each genre.</p>${rows.map((x) => `<div class="graph-row"><span title="${esc(x.genre)}">${esc(x.genre)} <small>(${x.count})</small></span><i style="width:${Math.max(3, x.score / max * 100)}%;background:var(--poki)"></i><b>${Math.round(x.score)}</b></div>`).join('')}</section>`;
+  return `<section class="card genre-graph"><h2>Best-performing genres</h2><p class="sub">Ranked by average rising score across all tracked games.</p><div class="genre-cloud">${rows.map((x) => `<span class="genre-chip" title="Average rising score ${Math.round(x.score)}"><b>${esc(x.genre)}</b><small>${Math.round(x.score)} score · ${x.count} games</small></span>`).join('')}</div></section>`;
 }
 function pagesView() {
   const pages = state.pages;

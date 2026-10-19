@@ -58,6 +58,10 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .report-graph h2 { margin: 0 0 12px; font-size: 15px; } .graph-row { display: grid; grid-template-columns: minmax(120px, 220px) 1fr 42px; gap: 10px; align-items: center; margin: 8px 0; }
 .graph-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; } .graph-row i { height: 8px; border-radius: 5px; background: var(--rise); display: block; } .graph-row b { text-align: right; font-size: 12px; }
 .graph-row small { color: var(--muted); }
+.genre-graph { margin-bottom: 22px; }
+.genre-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+.genre-chip { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 11px; border-radius: 999px; background: var(--panel2); color: var(--text); }
+.genre-chip b { font-size: 13px; } .genre-chip small { color: var(--muted); font-size: 11px; }
 .global-graph { margin-bottom: 22px; }
 .global-row { display: grid; grid-template-columns: minmax(180px, 330px) 1fr 34px; gap: 12px; align-items: center; padding: 7px 6px; border-radius: 9px; cursor: pointer; }
 .global-row:hover { background: var(--panel2); }
