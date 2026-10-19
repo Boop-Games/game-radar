@@ -377,6 +377,7 @@ function platformView(p) {
       ? 'Live player counts from Roblox. "Change" compares players with the same point ~24h ago (or the oldest snapshot while history builds).'
       : p === 'poki' ? 'Poki shows a rounded "live players" estimate (1,000+, 5,000+, 10,000+ …), so many games tie; Popular rank breaks ties. "Trending #" is Poki\'s own trending position. "Change" is movement in the Popular list since the earlier snapshot.' : `There are no player counts for ${NAMES[p]}. Rank is Top Free chart position; "Change" is movement since the earlier snapshot. ${p === 'android' ? 'New is by release date because Google Play has no New chart.' : 'iOS New rank is the App Store New chart.'}`;
   return `
+  ${card('Top rising', 'The three fastest-rising games on this platform', pill(p), rr.slice(0, 3).map(riseRow).join('') || '<p class="note">No rising data yet.</p>')}
   <div class="cols">
     ${card('Top 10', p === 'roblox' ? 'By players online right now' : 'By live player estimate, ties by Popular rank', pill(p), top.map((g, i) => topRow(g, i, max)).join(''))}
     ${card('Rising fast', 'Highest rising score', pill(p), rr.map(riseRow).join(''))}
