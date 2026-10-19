@@ -175,7 +175,7 @@ const dirLabel = (key, dir) => (key === 'released' ? (dir < 0 ? 'Newest first' :
 // ---------- keyword catalogue ----------
 const KW_SORTS = {
   count: ['Most games', (t) => t.count],
-  share: ['Most popular (share of live players)', (t) => t.share],
+  share: ['Most popular (share / chart weight)', (t) => t.share],
   trend: ['Trending up', (t) => t.shareDelta],
   rising: ['Highest avg rising score', (t) => t.avgRising],
 };
@@ -207,7 +207,7 @@ function kwCard(p) {
     return `<div class="kw${open ? ' open' : ''}">
       <div class="kwh" data-kw="${esc(key)}">
         <div><b>${esc(t.term)}</b> ${kwChip(t)}<div class="meta">${t.count} games${t.mentions ? ` · +${t.mentions} mention it in descriptions` : ''}</div></div>
-        <div class="kwbar" title="share of all live players on ${NAMES[p]}"><i style="width:${Math.max(3, (t.share / maxShare) * 100)}%;background:${COLORS[p]}"></i></div>
+        <div class="kwbar" title="${isMobile(p) ? 'share weighted by Top Free chart position' : 'share of all live players'} on ${NAMES[p]}"><i style="width:${Math.max(3, (t.share / maxShare) * 100)}%;background:${COLORS[p]}"></i></div>
         <div class="val num">${(t.share * 100).toFixed(1)}%<small>share</small></div>
         <div class="val num" style="color:var(--rise)">${t.avgRising.toFixed(0)}<small>avg rising</small></div>
       </div>
@@ -228,7 +228,7 @@ function kwView() {
     <label class="muted"><input type="checkbox" id="kwph" ${k.phrases ? 'checked' : ''}> Include 2-word phrases</label>
   </div>
   <div class="cols" id="kwbody">${kwBody()}</div>
-  <p class="note">Words come from game titles (a word has to appear in 2+ titles). "Share" is the portion of all live players (Poki's figure is a rounded estimate) held by games with that word. A single mega-hit can dominate share, so also sort by "Most games". "Trending up" compares share with ~24h ago and fills in as history builds.</p>`;
+  <p class="note">Words come from game titles (a word has to appear in 2+ titles). "Share" is the portion of all live players (Poki's figure is a rounded estimate) held by games with that word; for iOS and Android it is weighted by Top Free chart position. A single mega-hit can dominate share, so also sort by "Most games". "Trending up" compares share with ~24h ago and fills in as history builds.</p>`;
 }
 const kwBody = () => PLATFORMS.filter((p) => state.data[p]).map(kwCard).join('');
 const drawKw = () => {
@@ -269,6 +269,8 @@ const COLS = {
     ['released', 'Released', relTs, relCell, 1],
     ['risingScore', 'Rising', (g) => g.risingScore, (g) => `<b style="color:var(--rise)">${g.risingScore.toFixed(0)}</b>`, 1],
   ],
+  ios: [['rank', '# Top Free', g => g.rank, g => g.rank ?? '–'], ['name', 'Game', g => g.name, g => `<div class="g">${icon(g)}<span>${esc(g.name)}</span></div>`], ['genre', 'Genre', g => g.genre, g => esc(g.genre)], ['grossingRank', 'Grossing #', g => g.grossingRank, g => g.grossingRank ?? '–', 1], ['newRank', 'New #', g => g.newRank, g => g.newRank ?? '–', 1], ['ratingCount', 'Ratings', g => g.ratingCount, g => full(g.ratingCount), 1], ['ratingValue', 'Rating', g => g.ratingValue, g => g.ratingValue ? `★ ${g.ratingValue}` : '–', 1], ['votesPerDay', 'Ratings / day', g => g.votesPerDay, g => full(g.votesPerDay), 1], ['rankDelta', 'Change', g => g.rankDelta, g => deltaChip(g) || '–', 1], ['released', 'Released', relTs, relCell, 1], ['risingScore', 'Rising', g => g.risingScore, g => g.risingScore == null ? '–' : `<b style="color:var(--rise)">${g.risingScore.toFixed(0)}</b>`, 1]],
+  android: [['rank', '# Top Free', g => g.rank, g => g.rank ?? '–'], ['name', 'Game', g => g.name, g => `<div class="g">${icon(g)}<span>${esc(g.name)}</span></div>`], ['genre', 'Genre', g => g.genre, g => esc(g.genre)], ['grossingRank', 'Grossing #', g => g.grossingRank, g => g.grossingRank ?? '–', 1], ['ratingCount', 'Ratings', g => g.ratingCount, g => full(g.ratingCount), 1], ['ratingValue', 'Rating', g => g.ratingValue, g => g.ratingValue ? `★ ${g.ratingValue}` : '–', 1], ['votesPerDay', 'Ratings / day', g => g.votesPerDay, g => full(g.votesPerDay), 1], ['installs', 'Installs', g => g.installs, g => esc(g.installsLabel ?? full(g.installs)), 1], ['rankDelta', 'Change', g => g.rankDelta, g => deltaChip(g) || '–', 1], ['released', 'Released', relTs, relCell, 1], ['risingScore', 'Rising', g => g.risingScore, g => g.risingScore == null ? '–' : `<b style="color:var(--rise)">${g.risingScore.toFixed(0)}</b>`, 1]],
 };
 
 function platformView(p) {
@@ -278,7 +280,7 @@ function platformView(p) {
   const blurb =
     p === 'roblox'
       ? 'Live player counts from Roblox. "Change" compares players with the same point ~24h ago (or the oldest snapshot while history builds).'
-      : 'Poki shows a rounded "live players" estimate (1,000+, 5,000+, 10,000+ …), so many games tie; Popular rank breaks ties. "Trending #" is Poki\'s own trending position. "Change" is movement in the Popular list since the earlier snapshot.';
+      : p === 'poki' ? 'Poki shows a rounded "live players" estimate (1,000+, 5,000+, 10,000+ …), so many games tie; Popular rank breaks ties. "Trending #" is Poki\'s own trending position. "Change" is movement in the Popular list since the earlier snapshot.' : `There are no player counts for ${NAMES[p]}. Rank is Top Free chart position; "Change" is movement since the earlier snapshot. ${p === 'android' ? 'New is by release date because Google Play has no New chart.' : 'iOS New rank is the App Store New chart.'}`;
   return `
   <div class="cols">
     ${card('Top 10', p === 'roblox' ? 'By players online right now' : 'By live player estimate, ties by Popular rank', pill(p), top.map((g, i) => topRow(g, i, max)).join(''))}
