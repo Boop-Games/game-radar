@@ -171,7 +171,7 @@ function overview() {
 
 function globalGraph() {
   const rows = PLATFORMS.flatMap((p) => risers(p, 3).map((g) => ({ ...g, platform: p }))).sort((a, b) => b.risingScore - a.risingScore);
-  return `<section class="card global-graph"><h2>Global rising signal</h2><p class="sub">Top rising games across every tracked platform, on the same 0–100 score scale.</p>${rows.length ? rows.map((g) => `<div class="global-row"><span class="global-name">${icon(g)}<b class="pill ${g.platform}">${NAMES[g.platform]}</b><span class="global-title">${esc(g.name)}</span></span><div class="global-track"><i style="width:${Math.max(3, g.risingScore)}%;background:${COLORS[g.platform]}"></i></div><strong>${Math.round(g.risingScore)}</strong></div>`).join('') : '<p class="note">No rising data yet.</p>'}</section>`;
+  return `<section class="card global-graph"><h2>Global rising signal</h2><p class="sub">Top rising games across every tracked platform, on the same 0–100 score scale.</p>${rows.length ? rows.map((g) => `<div class="global-row" data-open="${g.platform}:${esc(g.id)}"><span class="global-name">${icon(g)}<b class="pill ${g.platform}">${NAMES[g.platform]}</b><span class="global-title">${esc(g.name)}</span></span><div class="global-track"><i style="width:${Math.max(3, g.risingScore)}%;background:${COLORS[g.platform]}"></i></div><strong>${Math.round(g.risingScore)}</strong></div>`).join('') : '<p class="note">No rising data yet.</p>'}</section>`;
 }
 
 const relTs = (g) => Date.parse(g.created || g.published || g.released) || null;

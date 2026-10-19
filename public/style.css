@@ -58,7 +58,8 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .report-graph h2 { margin: 0 0 12px; font-size: 15px; } .graph-row { display: grid; grid-template-columns: minmax(120px, 220px) 1fr 42px; gap: 10px; align-items: center; margin: 8px 0; }
 .graph-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; } .graph-row i { height: 8px; border-radius: 5px; background: var(--rise); display: block; } .graph-row b { text-align: right; font-size: 12px; }
 .global-graph { margin-bottom: 22px; }
-.global-row { display: grid; grid-template-columns: minmax(180px, 330px) 1fr 34px; gap: 12px; align-items: center; padding: 7px 0; }
+.global-row { display: grid; grid-template-columns: minmax(180px, 330px) 1fr 34px; gap: 12px; align-items: center; padding: 7px 6px; border-radius: 9px; cursor: pointer; }
+.global-row:hover { background: var(--panel2); }
 .global-name { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .global-name .ic { width: 32px; height: 32px; border-radius: 7px; flex: 0 0 auto; }
 .global-title { overflow: hidden; text-overflow: ellipsis; }
