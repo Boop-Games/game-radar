@@ -1,9 +1,9 @@
 'use strict';
 
 const $ = (s) => document.querySelector(s);
-const PLATFORMS = ['roblox', 'poki', 'ios', 'android'];
-const COLORS = { roblox: 'var(--roblox)', poki: 'var(--poki)', ios: 'var(--ios)', android: 'var(--android)' };
-const NAMES = { roblox: 'Roblox', poki: 'Poki', ios: 'iOS', android: 'Android' };
+const PLATFORMS = ['roblox', 'poki', 'crazygames', 'ios', 'android'];
+const COLORS = { roblox: 'var(--roblox)', poki: 'var(--poki)', crazygames: 'var(--crazygames)', ios: 'var(--ios)', android: 'var(--android)' };
+const NAMES = { roblox: 'Roblox', poki: 'Poki', crazygames: 'CrazyGames', ios: 'iOS', android: 'Android' };
 const isMobile = (p) => p === 'ios' || p === 'android';
 const perPlatform = (v) => Object.fromEntries(PLATFORMS.map((p) => [p, typeof v === 'function' ? v(p) : v]));
 
@@ -11,9 +11,11 @@ const state = {
   data: null,
   status: null,
   tab: location.hash.slice(1) || 'overview',
+  mobile: 'ios', // which store the Mobile tab shows: 'ios' or 'android'
+  social: { q: '', filter: 'all', result: null }, // result: the last hashtag lookup, or { notFound: name }
   q: perPlatform(''),
   cat: perPlatform(''),
-  sort: { roblox: ['playing', -1], poki: ['live', -1], ios: ['rank', 1], android: ['rank', 1] },
+  sort: { roblox: ['playing', -1], poki: ['live', -1], crazygames: ['rank', 1], ios: ['rank', 1], android: ['rank', 1] },
   limit: perPlatform(50),
   open: null,
   kw: { q: '', sort: 'count', phrases: true, open: new Set(), limit: perPlatform(40) },
@@ -48,6 +50,7 @@ const nl = (v) => v ?? 1e9;
 const ORDER = {
   roblox: (a, b) => b.playing - a.playing,
   poki: (a, b) => (b.live ?? 0) - (a.live ?? 0) || nl(a.rank) - nl(b.rank),
+  crazygames: (a, b) => nl(a.rank) - nl(b.rank) || nl(a.newRank) - nl(b.newRank),
   ios: (a, b) => nl(a.rank) - nl(b.rank) || nl(a.grossingRank) - nl(b.grossingRank),
   android: (a, b) => nl(a.rank) - nl(b.rank) || nl(a.grossingRank) - nl(b.grossingRank),
 };
@@ -126,7 +129,7 @@ function shortRiseReasons(g) {
 function legacyTopRow(g, i, max) {
   const p = g.platform;
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
-  const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
+  const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : p === 'crazygames' ? 'votes' : 'ratings';
   const w = barValue(g) / max;
   const extra =
     p === 'roblox' ? '' :
@@ -142,8 +145,8 @@ function legacyTopRow(g, i, max) {
 function topRow(g, i, max) {
   const p = g.platform;
   const val = p === 'roblox' ? full(g.playing) : p === 'poki' ? (g.live != null ? `${full(g.live)}+` : '–') : compact(g.ratingCount);
-  const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : 'ratings';
-  const extra = p === 'poki' ? `${g.rank ? ` · Popular #${g.rank}` : ''}${g.trendingRank ? ` · Trending #${g.trendingRank}` : ''}` : p === 'roblox' ? '' : `${g.rank ? ` · Free #${g.rank}` : ''}${g.grossingRank ? ` · Grossing #${g.grossingRank}` : ''}`;
+  const small = p === 'roblox' ? 'playing now' : p === 'poki' ? 'live (estimate)' : p === 'crazygames' ? 'votes' : 'ratings';
+  const extra = p === 'poki' ? `${g.rank ? ` · Popular #${g.rank}` : ''}${g.trendingRank ? ` · Trending #${g.trendingRank}` : ''}` : p === 'roblox' ? '' : p === 'crazygames' ? (g.rank ? ` · Hot #${g.rank}` : '') : `${g.rank ? ` · Free #${g.rank}` : ''}${g.grossingRank ? ` · Grossing #${g.grossingRank}` : ''}`;
   return `<div class="row game-card" data-open="${p}:${esc(g.id)}"><div class="rk">${i + 1}</div><div class="game-card-top"><div class="nm">${esc(g.name)} ${deltaChip(g)}</div><span class="game-tag">${esc(g.genre ?? g.category)}</span><span class="game-tag"> ${ageStr(g.ageDays)}</span></div><div class="game-card-bottom">${icon(g)}<div class="val num">${val}<small>${small}</small></div>${spark(sparkVals(g), COLORS[p])}</div></div>`;
 }
 
@@ -157,7 +160,7 @@ function legacyRiseRow(g, i) {
 
 function riseCard(g) {
   return `<div class="rcard" data-open="${g.platform}:${esc(g.id)}">
-    <div class="hd">${icon(g)}<div style="min-width:0"><div class="nm">${esc(g.name)}</div><div class="meta">${g.platform === 'roblox' ? `${full(g.playing)} playing` : `${compact(g.ratingCount)} ${g.platform === 'poki' ? 'votes' : 'ratings'}`} · ${esc(g.genre ?? g.category)}</div></div>
+    <div class="hd">${icon(g)}<div style="min-width:0"><div class="nm">${esc(g.name)}</div><div class="meta">${g.platform === 'roblox' ? `${full(g.playing)} playing` : `${compact(g.ratingCount)} ${g.platform === 'poki' || g.platform === 'crazygames' ? 'votes' : 'ratings'}`} · ${esc(g.genre ?? g.category)}</div></div>
     <div class="score"><b>${g.risingScore.toFixed(0)}</b><small>score</small></div></div>
     <div class="tags">${g.reasons.slice(0, 4).map((r) => `<span class="tag">${esc(r)}</span>`).join('') || '<span class="tag">New to the charts</span>'}</div></div>`;
 }
@@ -169,12 +172,14 @@ const pill = (p) => `<span class="pill ${p}">${NAMES[p]}</span>`;
 const TOP_SUB = {
   roblox: 'By players online right now',
   poki: "By Poki's live player estimate (rounded, ties by Popular rank)",
+  crazygames: 'CrazyGames Hot list order (no player counts are public)',
   ios: 'Top Free chart, US App Store',
   android: 'Top Free chart, US Google Play',
 };
 const RISE_SUB = {
   roblox: 'Growth, chart placement and freshness combined',
   poki: "Poki's trending rank, vote velocity and freshness",
+  crazygames: 'Vote velocity, Hot-list climb and freshness',
   ios: 'Ratings velocity, chart climb and the New chart',
   android: 'Ratings velocity, chart climb and install steps',
 };
@@ -185,7 +190,7 @@ function overview() {
   const top = Object.fromEntries(ps.map((p) => [p, topList(p)]));
   const best = ps.map((p) => risers(p, 1)[0]).filter(Boolean).sort((a, b) => b.risingScore - a.risingScore)[0];
   const totalPlaying = games('roblox').reduce((s, g) => s + g.playing, 0);
-  const sub = { roblox: (g) => `${full(g.playing)} playing now`, poki: (g) => (g.live != null ? `${full(g.live)}+ live players (est.)` : `${compact(g.ratingCount)} votes`), ios: (g) => `${compact(g.ratingCount)} ratings · ★ ${g.ratingValue ?? '–'}`, android: (g) => `${g.installsLabel ?? ''} installs · ★ ${g.ratingValue ?? '–'}` };
+  const sub = { roblox: (g) => `${full(g.playing)} playing now`, poki: (g) => (g.live != null ? `${full(g.live)}+ live players (est.)` : `${compact(g.ratingCount)} votes`), crazygames: (g) => `${compact(g.ratingCount)} votes · ★ ${g.ratingValue ?? '–'}`, ios: (g) => `${compact(g.ratingCount)} ratings · ★ ${g.ratingValue ?? '–'}`, android: (g) => `${g.installsLabel ?? ''} installs · ★ ${g.ratingValue ?? '–'}` };
   const block = (title, subFor, bodyFor) => `<div class="overview-platforms">${visible.map((p) => card(title, subFor(p), pill(p), bodyFor(p))).join('') || '<p class="note">Select at least one platform.</p>'}</div>`;
   return `
   ${globalGraph()}
@@ -294,15 +299,19 @@ function kwView() {
   <div class="cols" id="kwbody">${kwBody()}</div>
   <p class="note">Words come from game titles (a word has to appear in 2+ titles). "Share" is the portion of all live players (Poki's figure is a rounded estimate) held by games with that word; for iOS and Android it is weighted by Top Free chart position. A single mega-hit can dominate share, so also sort by "Most games". "Trending up" compares share with ~24h ago and fills in as history builds.</p>`;
 }
-const inlineReport = (s) => esc(s).replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+const inlineReport = (s) => esc(s).replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" onerror="this.remove()">').replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1 ↗</a>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>');
 function renderReport(source) {
   const lines = source.split(/\r?\n/), out = []; let i = 0;
   while (i < lines.length) {
     const line = lines[i].trim(); if (!line) { i++; continue; }
     const heading = line.match(/^(#{1,6})\s+(.+)/); if (heading) { out.push(`<h${heading[1].length}>${inlineReport(heading[2])}</h${heading[1].length}>`); i++; continue; }
     if (line.startsWith('|') && i + 1 < lines.length && /^\|?\s*:?-+:?/.test(lines[i + 1])) { const cells = (x, tag = 'td') => x.split('|').slice(1, -1).map((c) => `<${tag}>${inlineReport(c.trim())}</${tag}>`).join(''); out.push(`<div class="report-table"><table><thead><tr>${cells(line, 'th')}</tr></thead><tbody>`); i += 2; while (i < lines.length && lines[i].trim().startsWith('|')) out.push(`<tr>${cells(lines[i++].trim())}</tr>`); out.push('</tbody></table></div>'); continue; }
+    if (line.startsWith('```')) { const code = []; i++; while (i < lines.length && !lines[i].trim().startsWith('```')) code.push(lines[i++]); i++; out.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`); continue; }
+    if (/^(-{3,}|\*{3,})$/.test(line)) { out.push('<hr>'); i++; continue; }
+    if (line.startsWith('> ')) { const quote = []; while (i < lines.length && lines[i].trim().startsWith('>')) quote.push(lines[i++].trim().replace(/^>\s?/, '')); out.push(`<blockquote>${inlineReport(quote.join(' '))}</blockquote>`); continue; }
+    if (/^\d+\.\s/.test(line)) { const items = []; while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) items.push(`<li>${inlineReport(lines[i++].trim().replace(/^\d+\.\s/, ''))}</li>`); out.push(`<ol>${items.join('')}</ol>`); continue; }
     if (line.startsWith('- ')) { const items = []; while (i < lines.length && lines[i].trim().startsWith('- ')) items.push(`<li>${inlineReport(lines[i++].trim().slice(2))}</li>`); out.push(`<ul>${items.join('')}</ul>`); continue; }
-    const paragraph = []; while (i < lines.length && lines[i].trim() && !/^(#{1,6})\s|^- |^\|/.test(lines[i].trim())) paragraph.push(lines[i++].trim()); out.push(`<p>${inlineReport(paragraph.join(' '))}</p>`);
+    const paragraph = []; while (i < lines.length && lines[i].trim() && !/^(#{1,6})\s|^- |^\d+\.\s|^> |^\||^```|^(-{3,}|\*{3,})$/.test(lines[i].trim())) paragraph.push(lines[i++].trim()); out.push(`<p>${inlineReport(paragraph.join(' '))}</p>`);
   } return `<div class="report-content">${out.join('')}</div>`;
 }
 function reportGraph(page) { const values = (page.items || []).map((g) => ({ name: g.name, value: g.risingScore ?? g.playing ?? g.rank ?? g.ratings ?? 0 })).slice(0, 10); if (!values.length) return ''; const max = Math.max(...values.map((g) => g.value), 1); return `<section class="report-graph"><h2>Signal overview</h2>${values.map((g) => `<div class="graph-row"><span title="${esc(g.name)}">${esc(g.name)}</span><i style="width:${Math.max(3, g.value / max * 100)}%"></i><b>${Math.round(g.value)}</b></div>`).join('')}</section>`; }
@@ -316,7 +325,7 @@ function genreGraph() {
 }
 function pagesView() {
   const pages = state.pages;
-  if (!pages.length) return `<div class="card"><h2>Research Pages</h2><p class="sub">Reports created by agents through the CLI appear here.</p><p class="note">Example: <code>node bin/game-radar.mjs report popular-not-on-poki</code></p></div>`;
+  if (!pages.length) return `<div class="card"><h2>Research Pages</h2><p class="sub">Any AI or script can publish a markdown report here. The only requirement is a body; title and summary are inferred if missing.</p><p class="note">Example: <code>node bin/game-radar.mjs report submit --file report.md --title "My research"</code></p></div>`;
   const selected = pages.find((p) => p.slug === state.page) || pages[0];
   return `<div class="pages"><aside class="card page-list"><h2>Research Pages</h2>${pages.map((p) => `<button class="page-link ${p.slug === selected.slug ? 'on' : ''}" data-page="${esc(p.slug)}"><b>${esc(p.title)}</b><span>${esc(p.summary || '')}</span><small>${new Date(p.createdAt).toLocaleString()}</small></button>`).join('')}</aside><article class="card page-body"><h1>${esc(selected.title)}</h1><p class="sub">${esc(selected.summary || '')} · ${new Date(selected.createdAt).toLocaleString()}</p>${genreGraph()}${reportGraph(selected)}${renderReport(selected.markdown || '')}</article></div>`;
 }
@@ -364,6 +373,19 @@ const COLS = {
     ['released', 'Released', relTs, relCell, 1],
     ['risingScore', 'Rising', (g) => g.risingScore, (g) => `<b style="color:var(--rise)">${g.risingScore.toFixed(0)}</b>`, 1],
   ],
+  crazygames: [
+    ['rank', '# Hot', (g) => g.rank, (g) => g.rank ?? '<span class="muted">–</span>'],
+    ['name', 'Game', (g) => g.name, (g) => `<div class="g">${icon(g)}<span>${esc(g.name)}</span></div>`],
+    ['category', 'Category', (g) => g.category, (g) => esc(g.category)],
+    ['newRank', 'New #', (g) => g.newRank, (g) => g.newRank ?? '<span class="muted">–</span>', 1],
+    ['ratingCount', 'Votes', (g) => g.ratingCount, (g) => full(g.ratingCount), 1],
+    ['ratingValue', 'Rating', (g) => g.ratingValue, (g) => (g.ratingValue ? `★ ${g.ratingValue}` : '–'), 1],
+    ['votesPerDay', 'Votes / day', (g) => g.votesPerDay, (g) => full(g.votesPerDay), 1],
+    ['plays', 'Plays', (g) => g.plays, (g) => compact(g.plays), 1],
+    ['rankDelta', 'Change', (g) => g.rankDelta, (g) => deltaChip(g) || '<span class="muted">–</span>', 1],
+    ['released', 'Released', relTs, relCell, 1],
+    ['risingScore', 'Rising', (g) => g.risingScore, (g) => (g.risingScore == null ? '<span class="muted">–</span>' : `<b style="color:var(--rise)">${g.risingScore.toFixed(0)}</b>`), 1],
+  ],
   ios: [['rank', '# Top Free', g => g.rank, g => g.rank ?? '–'], ['name', 'Game', g => g.name, g => `<div class="g">${icon(g)}<span>${esc(g.name)}</span></div>`], ['genre', 'Genre', g => g.genre, g => esc(g.genre)], ['grossingRank', 'Grossing #', g => g.grossingRank, g => g.grossingRank ?? '–', 1], ['newRank', 'New #', g => g.newRank, g => g.newRank ?? '–', 1], ['ratingCount', 'Ratings', g => g.ratingCount, g => full(g.ratingCount), 1], ['ratingValue', 'Rating', g => g.ratingValue, g => g.ratingValue ? `★ ${g.ratingValue}` : '–', 1], ['votesPerDay', 'Ratings / day', g => g.votesPerDay, g => full(g.votesPerDay), 1], ['rankDelta', 'Change', g => g.rankDelta, g => deltaChip(g) || '–', 1], ['released', 'Released', relTs, relCell, 1], ['risingScore', 'Rising', g => g.risingScore, g => g.risingScore == null ? '–' : `<b style="color:var(--rise)">${g.risingScore.toFixed(0)}</b>`, 1]],
   android: [['rank', '# Top Free', g => g.rank, g => g.rank ?? '–'], ['name', 'Game', g => g.name, g => `<div class="g">${icon(g)}<span>${esc(g.name)}</span></div>`], ['genre', 'Genre', g => g.genre, g => esc(g.genre)], ['grossingRank', 'Grossing #', g => g.grossingRank, g => g.grossingRank ?? '–', 1], ['ratingCount', 'Ratings', g => g.ratingCount, g => full(g.ratingCount), 1], ['ratingValue', 'Rating', g => g.ratingValue, g => g.ratingValue ? `★ ${g.ratingValue}` : '–', 1], ['votesPerDay', 'Ratings / day', g => g.votesPerDay, g => full(g.votesPerDay), 1], ['installs', 'Installs', g => g.installs, g => esc(g.installsLabel ?? full(g.installs)), 1], ['rankDelta', 'Change', g => g.rankDelta, g => deltaChip(g) || '–', 1], ['released', 'Released', relTs, relCell, 1], ['risingScore', 'Rising', g => g.risingScore, g => g.risingScore == null ? '–' : `<b style="color:var(--rise)">${g.risingScore.toFixed(0)}</b>`, 1]],
 };
@@ -375,11 +397,11 @@ function platformView(p) {
   const blurb =
     p === 'roblox'
       ? 'Live player counts from Roblox. "Change" compares players with the same point ~24h ago (or the oldest snapshot while history builds).'
-      : p === 'poki' ? 'Poki shows a rounded "live players" estimate (1,000+, 5,000+, 10,000+ …), so many games tie; Popular rank breaks ties. "Trending #" is Poki\'s own trending position. "Change" is movement in the Popular list since the earlier snapshot.' : `There are no player counts for ${NAMES[p]}. Rank is Top Free chart position; "Change" is movement since the earlier snapshot. ${p === 'android' ? 'New is by release date because Google Play has no New chart.' : 'iOS New rank is the App Store New chart.'}`;
+      : p === 'poki' ? 'Poki shows a rounded "live players" estimate (1,000+, 5,000+, 10,000+ …), so many games tie; Popular rank breaks ties. "Trending #" is Poki\'s own trending position. "Change" is movement in the Popular list since the earlier snapshot.' : p === 'crazygames' ? 'CrazyGames publishes no live player counts, so rank is its Hot list position (the "hot right now" order on the site). "Change" is movement in the Hot list since the earlier snapshot; "New #" is the New list. Ratings are out of 10.' : `There are no player counts for ${NAMES[p]}. Rank is Top Free chart position; "Change" is movement since the earlier snapshot. ${p === 'android' ? 'New is by release date because Google Play has no New chart.' : 'iOS New rank is the App Store New chart.'}`;
   return `
   ${card('Top rising', 'The three fastest-rising games on this platform', pill(p), rr.slice(0, 3).map(riseRow).join('') || '<p class="note">No rising data yet.</p>')}
   <div class="cols">
-    ${card('Top 10', p === 'roblox' ? 'By players online right now' : 'By live player estimate, ties by Popular rank', pill(p), top.map((g, i) => topRow(g, i, max)).join(''))}
+    ${card('Top 10', TOP_SUB[p], pill(p), top.map((g, i) => topRow(g, i, max)).join(''))}
     ${card('Rising fast', 'Highest rising score', pill(p), rr.map(riseRow).join(''))}
   </div>
   <h3 class="section">All ${NAMES[p]} games <span class="muted" style="font-weight:400;font-size:13px">(${games(p).length})</span></h3>
@@ -394,8 +416,67 @@ function platformView(p) {
   <p class="note">${blurb}</p>`;
 }
 
+// The platform whose table/search/sort state is on screen: the Mobile tab shows iOS or Android.
+const active = () => (state.tab === 'mobile' ? state.mobile : state.tab);
+const MOBILE_PLATFORMS = ['ios', 'android'];
+
+// ---------- social trends ----------
+const SOCIAL_FILTERS = { all: 'All', games: 'Games', other: 'Everything else' };
+const SOCIAL_NOTE = 'Trends come from one public Mastodon server (mastodon.social). A tag can be quiet here while it is busy on other networks, so use the search box to check any hashtag.';
+const growthChip = (x) => (x.growth == null ? '' : `<span class="chip ${x.growth > 0 ? 'up' : 'dn'}">${x.growth > 0 ? '▲' : '▼'} ${Math.abs(Math.round(x.growth * 100))}%</span>`);
+
+function socialTagRow(t) {
+  return `<div class="kw"><div class="kwh" data-social-tag="${esc(t.name)}"><div><b>#${esc(t.name)}</b> ${t.new ? '<span class="chip up">new</span>' : ''} ${growthChip(t)} ${t.game ? '<span class="game-tag">game</span>' : ''}<div class="meta">${full(t.accounts)} accounts today</div></div><div class="val num">${compact(t.uses)}<small>uses today</small></div></div></div>`;
+}
+
+function socialPost(p) {
+  return `<div class="row game-card"><div class="game-card-top"><div class="nm">${esc(p.text)}</div></div><div class="game-card-bottom"><div class="meta">@${esc(p.account ?? 'unknown')} · ♥ ${full(p.likes)} · ↻ ${full(p.boosts)} · ${full(p.replies)} replies · <a href="${esc(p.url)}" target="_blank" rel="noopener">open ↗</a></div></div></div>`;
+}
+
+function socialLookup() {
+  const r = state.social.result;
+  if (!r) return '';
+  if (r.notFound) return `<section class="card"><h2>#${esc(r.notFound)}</h2><p class="note">This server has no record of that hashtag. It may never have been used here.</p></section>`;
+  return `<section class="card"><h2>#${esc(r.name)} ${r.game ? '<span class="game-tag">game</span>' : ''}</h2><p class="sub">Today on this server: ${full(r.uses)} uses from ${full(r.accounts)} accounts ${growthChip(r)}</p><p class="note"><a href="${esc(r.url)}" target="_blank" rel="noopener">View #${esc(r.name)} on ${esc(r.instance)} ↗</a></p></section>`;
+}
+
+function socialView() {
+  const s = state.data?.social;
+  const f = state.social.filter;
+  const head = `<div class="tools"><input id="socialq" type="search" placeholder="Look up any hashtag, e.g. clickies" value="${esc(state.social.q)}"><span class="muted">Show</span>${Object.entries(SOCIAL_FILTERS).map(([k, label]) => `<button class="platform-toggle ${f === k ? 'on' : ''}" data-social-filter="${k}">${label}</button>`).join('')}</div>${socialLookup()}`;
+  if (!s) return `${head}<div class="card"><h2>Social trends</h2><p class="note">No social data yet. It refreshes every 15 minutes.</p></div>`;
+  const keep = (x) => f === 'all' || (f === 'games' ? x.game : !x.game);
+  const tags = s.tags.filter(keep);
+  const posts = s.posts.filter(keep);
+  const errNote = state.data?.errors?.social ? `<p class="note">Last social refresh failed: ${esc(state.data.errors.social)}. Showing the previous data.</p>` : '';
+  const emerging = (s.emerging ?? []).filter(keep);
+  const news = (s.inNews ?? []).filter(keep);
+  const emergingCard = `<section class="card"><h2>Emerging topics</h2><p class="sub">Topics that jumped from a small base and are used by many different accounts, so they are not one brand's campaign. Brands and people can still appear here.</p>${emerging.map(socialTagRow).join('') || '<p class="note">Nothing emerging in this view.</p>'}</section>`;
+  const newsCard = news.length ? `<section class="card"><h2>In the news</h2><p class="sub">Tags that match a headline on the server's trending links. Shown separately.</p>${news.map(socialTagRow).join('')}</section>` : '';
+  return `${head}${errNote}${emergingCard}<div class="cols">
+    <section class="card"><h2>Trending hashtags</h2><p class="sub">Most used on the server today. Click one to look it up.</p>${tags.map(socialTagRow).join('') || '<p class="note">Nothing trending in this view.</p>'}</section>
+    <section class="card"><h2>Trending posts</h2><p class="sub">The most boosted posts right now.</p>${posts.map(socialPost).join('') || '<p class="note">Nothing trending in this view.</p>'}</section>
+  </div>
+  ${newsCard}
+  ${s.gameTags?.length && f !== 'other' ? `<section class="card"><h2>Game hashtags</h2><p class="sub">Usage of game tags today.</p>${s.gameTags.map(socialTagRow).join('')}</section>` : ''}
+  <p class="note">${SOCIAL_NOTE} Updated ${ago(s.updatedAt)}.</p>`;
+}
+
+async function lookupHashtag(name) {
+  const clean = name.replace(/^#/, '').trim();
+  if (!clean) return;
+  const r = await fetch(`/api/social/tag/${encodeURIComponent(clean)}`);
+  state.social.result = r.ok ? await r.json() : { notFound: clean };
+  state.social.q = clean;
+  render();
+}
+
+function mobileView() {
+  return `<div class="tools"><span class="muted">Store</span>${MOBILE_PLATFORMS.map((p) => `<button class="platform-toggle ${state.mobile === p ? 'on' : ''}" data-mobile="${p}">${NAMES[p]}</button>`).join('')}</div>${platformView(state.mobile)}`;
+}
+
 function drawTable() {
-  const p = state.tab;
+  const p = active();
   const box = $('#tablebox');
   if (!box || !COLS[p]) return;
   const cols = COLS[p];
@@ -425,7 +506,9 @@ function drawer(key) {
   const roblox = p === 'roblox';
   const stats = roblox
     ? [['Playing now', full(g.playing)], ['Visits', compact(g.visits)], ['Favorites', compact(g.favorites)], ['Liked', pct(g.likeRatio)], ['Age', ageStr(g.ageDays)], ['Creator', esc(g.creator || '–')]]
-    : [['Live now (est.)', g.live != null ? full(g.live) + '+' : '–'], ['Trending rank', g.trendingRank ? '#' + g.trendingRank : '–'], ['Popular rank', g.rank ? '#' + g.rank : '–'], ['Votes', compact(g.ratingCount)], ['Rating', g.ratingValue ? '★ ' + g.ratingValue : '–'], ['Votes / day', full(g.votesPerDay)]];
+    : p === 'crazygames'
+      ? [['Hot rank', g.rank ? '#' + g.rank : '–'], ['New rank', g.newRank ? '#' + g.newRank : '–'], ['Votes', compact(g.ratingCount)], ['Rating', g.ratingValue ? '★ ' + g.ratingValue + '/10' : '–'], ['Votes / day', full(g.votesPerDay)], ['Plays', compact(g.plays)]]
+      : [['Live now (est.)', g.live != null ? full(g.live) + '+' : '–'], ['Trending rank', g.trendingRank ? '#' + g.trendingRank : '–'], ['Popular rank', g.rank ? '#' + g.rank : '–'], ['Votes', compact(g.ratingCount)], ['Rating', g.ratingValue ? '★ ' + g.ratingValue : '–'], ['Votes / day', full(g.votesPerDay)]];
   const h = g.hist ?? [];
   const liveHist = h.filter((x) => x[3] != null).map((x) => [x[0], x[3]]);
   const useLive = !roblox && new Set(liveHist.map((x) => x[1])).size > 1;
@@ -462,7 +545,7 @@ function render() {
   } else {
     const errs = Object.entries(d.errors ?? {});
     if (errs.length) html += `<div class="banner">Couldn't update ${errs.map(([k, v]) => `${NAMES[k]} (${esc(v)})`).join(', ')}. Showing the last good data for ${errs.length > 1 ? 'those' : 'it'}.</div>`;
-    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
+    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'mobile' ? mobileView() : state.tab === 'social' ? socialView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
   }
   $('#app').innerHTML = html;
   drawTable();
@@ -497,8 +580,9 @@ async function poll() {
     const changed = !state.data || s.updatedAt !== state.data.updatedAt;
     state.status = s;
     if (changed) await loadData();
-    if ((state.tab === 'pages' && !state.pages.length) || (state.tab === 'newsletter' && !state.newsletters.length)) { await loadPages(); render(); }
-    else paintStatus();
+    const pagesBefore = state.pages.map((p) => p.slug).join('|');
+    if (state.tab === 'pages' || (state.tab === 'newsletter' && !state.newsletters.length)) { await loadPages(); if (state.tab !== 'pages' || state.pages.map((p) => p.slug).join('|') !== pagesBefore) render(); }
+    paintStatus();
   } catch {
     $('#status').innerHTML = '<span class="dot busy"></span>Server unreachable, retrying…';
   }
@@ -522,6 +606,12 @@ document.addEventListener('click', async (e) => {
     else state.overviewPlatforms.add(p);
     return render();
   }
+  const socialFilter = t.closest('[data-social-filter]');
+  if (socialFilter) { state.social.filter = socialFilter.dataset.socialFilter; return render(); }
+  const socialTag = t.closest('[data-social-tag]');
+  if (socialTag) return lookupHashtag(socialTag.dataset.socialTag);
+  const mobileStore = t.closest('[data-mobile]');
+  if (mobileStore) { state.mobile = mobileStore.dataset.mobile; closeDrawer(); return render(); }
   const page = t.closest('[data-page]');
   if (page) { state.page = page.dataset.page; return render(); }
   const newsletter = t.closest('[data-newsletter]');
@@ -552,17 +642,17 @@ document.addEventListener('click', async (e) => {
   }
   const th = t.closest('th[data-sort]');
   if (th) {
-    const [k, d] = state.sort[state.tab];
-    state.sort[state.tab] = [th.dataset.sort, k === th.dataset.sort ? -d : TEXT_COLS.has(th.dataset.sort) ? 1 : -1];
+    const [k, d] = state.sort[active()];
+    state.sort[active()] = [th.dataset.sort, k === th.dataset.sort ? -d : TEXT_COLS.has(th.dataset.sort) ? 1 : -1];
     return drawTable();
   }
   if (t.id === 'sortdir') {
-    const [k, d] = state.sort[state.tab];
-    state.sort[state.tab] = [k, -d];
+    const [k, d] = state.sort[active()];
+    state.sort[active()] = [k, -d];
     return drawTable();
   }
   if (t.id === 'more') {
-    state.limit[state.tab] += 50;
+    state.limit[active()] += 50;
     return drawTable();
   }
   if (t.id === 'close' || t.id === 'scrim') return closeDrawer();
@@ -573,6 +663,7 @@ document.addEventListener('click', async (e) => {
   }
 });
 document.addEventListener('input', (e) => {
+  if (e.target.id === 'socialq') state.social.q = e.target.value;
   if (e.target.id === 'kwq') {
     state.kw.q = e.target.value;
     drawKw();
@@ -582,8 +673,8 @@ document.addEventListener('input', (e) => {
     drawKw();
   }
   if (e.target.id === 'q') {
-    state.q[state.tab] = e.target.value;
-    state.limit[state.tab] = 50;
+    state.q[active()] = e.target.value;
+    state.limit[active()] = 50;
     drawTable();
   }
 });
@@ -600,17 +691,18 @@ document.addEventListener('change', (e) => {
     drawKw();
   }
   if (e.target.id === 'sortsel') {
-    state.sort[state.tab] = [e.target.value, TEXT_COLS.has(e.target.value) ? 1 : -1];
+    state.sort[active()] = [e.target.value, TEXT_COLS.has(e.target.value) ? 1 : -1];
     drawTable();
   }
   if (e.target.id === 'cat') {
-    state.cat[state.tab] = e.target.value;
-    state.limit[state.tab] = 50;
+    state.cat[active()] = e.target.value;
+    state.limit[active()] = 50;
     drawTable();
   }
 });
 async function saveNewsletterSettings() { await fetch('/api/newsletter-settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(state.newsletterSettings) }); }
 document.addEventListener('keydown', (e) => e.key === 'Escape' && closeDrawer());
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'socialq') lookupHashtag(e.target.value); });
 window.addEventListener('hashchange', () => {
   state.tab = location.hash.slice(1) || 'overview';
   render();

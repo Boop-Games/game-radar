@@ -27,10 +27,20 @@
       "output": "release"
     },
     "files": [
+      "bin/**/*",
       "src/**/*",
       "public/**/*",
       "build/icon.png",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/skill",
+        "to": "skill",
+        "filter": [
+          "SKILL.md"
+        ]
+      }
     ],
     "win": {
       "target": [
@@ -46,6 +56,7 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
+      "include": "build/installer.nsh",
       "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,

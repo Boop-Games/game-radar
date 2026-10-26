@@ -1,7 +1,7 @@
 :root {
   --bg: #0b0e14; --panel: #131826; --panel2: #1a2133; --line: #232c42;
   --text: #e8ebf4; --muted: #8b94ab;
-  --roblox: #ff6b57; --poki: #4aa3ff; --ios: #c084fc; --android: #86efac; --rise: #3ddc97; --down: #ff6b81; --warn: #ffc857;
+  --roblox: #ff6b57; --poki: #4aa3ff; --crazygames: #ffb347; --ios: #c084fc; --android: #86efac; --rise: #3ddc97; --down: #ff6b81; --warn: #ffc857;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -70,6 +70,16 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .report-content h1 { font-size: 24px; } .report-content h2 { font-size: 18px; color: var(--text); } .report-content h3 { font-size: 15px; color: var(--muted); }
 .report-content p { margin: 10px 0; } .report-content ul { margin: 8px 0 16px; padding-left: 22px; }
 .report-content a { color: var(--poki); } .report-content strong { color: var(--text); }
+.report-content h2 { padding-top: 14px; border-top: 1px solid var(--line); }
+.report-content > h2:first-of-type { border-top: 0; padding-top: 0; }
+.report-content img { max-width: 100%; border-radius: 12px; }
+.report-content li { margin: 6px 0; }
+.report-content li img { width: 44px; height: 44px; object-fit: cover; vertical-align: middle; margin: 0 10px 0 0; border-radius: 10px; }
+.report-content ul:has(> li > img) { list-style: none; padding-left: 0; }
+.report-content blockquote { margin: 14px 0; padding: 12px 16px; border-left: 3px solid var(--rise); background: var(--panel2); border-radius: 10px; color: var(--muted); }
+.report-content blockquote strong { color: var(--rise); }
+.report-content hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
+.report-content code { background: var(--panel2); padding: 1px 6px; border-radius: 6px; font-size: 0.92em; }
 .report-table { overflow-x: auto; margin: 12px 0 20px; } .report-table table { min-width: 520px; }
 .report-table th { position: static; background: var(--panel2); color: var(--text); } .report-table td, .report-table th { padding: 9px 12px; }
 .report-graph { margin: 18px 0 24px; padding: 14px; background: var(--panel2); border-radius: 12px; }
@@ -99,6 +109,7 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 .pill.roblox { background: rgba(255,107,87,.15); color: var(--roblox); }
 .pill.poki { background: rgba(74,163,255,.15); color: var(--poki); }
+.pill.crazygames { background: rgba(255,179,71,.15); color: var(--crazygames); }
 .pill.ios { background: rgba(192,132,252,.15); color: var(--ios); }
 .pill.android { background: rgba(134,239,172,.15); color: var(--android); }
 .pill.rise { background: rgba(61,220,151,.15); color: var(--rise); }

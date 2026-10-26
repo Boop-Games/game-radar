@@ -6,6 +6,7 @@ import { runCollection } from './collect.mjs';
 import { loadLatest } from './store.mjs';
 import { findAlerts } from './alerts.mjs';
 import { PLATFORMS } from './rank.mjs';
+import { lookupTag } from './social.mjs';
 import { loadNewsletterSettings, saveNewsletterSettings, listNewsletters, createNewsletter, runNewsletterSchedule } from './newsletter.mjs';
 
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -53,7 +54,11 @@ export async function startServer({ port = 4173, host = '127.0.0.1', intervalMs 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/status') return send(res, 200, status());
-    if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
+    if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, social: latest?.social ?? null, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
+    if (url.pathname.startsWith('/api/social/tag/') && req.method === 'GET') {
+      const tag = await lookupTag(decodeURIComponent(url.pathname.slice('/api/social/tag/'.length)));
+      return tag ? send(res, 200, tag) : send(res, 404, { error: 'Tag not found on the instance' });
+    }
     if (url.pathname === '/api/snapshots' && req.method === 'GET') {
       try { return send(res, 200, (await readdir(snapshotsDir())).filter((n) => n.endsWith('.json')).sort().reverse().map((n) => ({ file: n, capturedAt: new Date(Number(n.slice(0, -5))).toISOString() }))); } catch { return send(res, 200, []); }
     }

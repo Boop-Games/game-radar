@@ -21,6 +21,8 @@ The installer is unsigned, so Windows SmartScreen may show a warning: choose **M
 - **Rising score (0-100):** growth, chart placement, freshness, approval and scale. Growth and trend arrows compare against ~24h ago, so they fill in after the app has run for a day.
 - **iOS / Android:** US Top Free and Grossing charts, ratings and release metadata. Mobile has no player counts; Android uses an unofficial Play scraper.
 - **Keywords:** common words and phrases across game titles, weighted by live players or mobile chart position.
+- **Social:** trending hashtags and posts from a public Mastodon server (no key needed), game and non-game topics, plus a search box for any hashtag. Shown in the Social tab and in the newsletter.
+- **Mobile:** the iOS and Android charts sit in their own Mobile tab.
 
 ## Develop
 
