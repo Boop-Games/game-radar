@@ -1,4 +1,5 @@
 import { getJson, pool } from './util.mjs';
+import { collectYouTube } from './youtube.mjs';
 
 // Social trends come from a Mastodon instance's public API: no account or API key is needed.
 // Bluesky and Reddit now need credentials for search, so they are not used here.
@@ -63,10 +64,11 @@ const TREND_PAGE_OFFSETS = [0, 20, 40, 60];
 
 export async function collectSocial({ posts = 10 } = {}) {
   const base = SOCIAL_INSTANCE.replace(/\/$/, '');
-  const [trendingPages, trendingStatuses, gameTagDetails] = await Promise.all([
+  const [trendingPages, trendingStatuses, gameTagDetails, youtube] = await Promise.all([
     Promise.all(TREND_PAGE_OFFSETS.map((offset) => getJson(`${base}/api/v1/trends/tags?limit=20&offset=${offset}`).catch(() => []))),
     getJson(`${base}/api/v1/trends/statuses?limit=20`),
     pool(GAME_TAGS, 4, (name) => getJson(`${base}/api/v1/tags/${name}`)),
+    collectYouTube().catch(() => null),
   ]);
 
   const pooled = [...new Map(trendingPages.flat().map((t) => [t.name.toLowerCase(), summarizeTag(t)])).values()];
@@ -86,6 +88,7 @@ export async function collectSocial({ posts = 10 } = {}) {
     inNews: withNews.filter((t) => t.news).slice(0, 10),
     gameTags: gameTagDetails.filter(Boolean).map(summarizeTag).sort((a, b) => b.uses - a.uses),
     posts: trendingStatuses.slice(0, posts).map(toPost),
+    youtube,
   };
 }
 
