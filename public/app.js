@@ -212,8 +212,9 @@ function riseRow(g, i) {
 }
 
 function globalGraph() {
-  const rows = PLATFORMS.flatMap((p) => risers(p, 3).map((g) => ({ ...g, platform: p }))).sort((a, b) => b.risingScore - a.risingScore);
-  return `<section class="card global-graph"><h2>Global rising signal</h2><p class="sub">Top rising games across every tracked platform, on the same 0–100 score scale.</p>${rows.length ? rows.map((g) => `<div class="global-row" data-open="${g.platform}:${esc(g.id)}"><span class="global-name">${icon(g)}<b class="pill ${g.platform}">${NAMES[g.platform]}</b><span class="global-title">${esc(g.name)}</span></span><div class="global-track"><i style="width:${Math.max(3, g.risingScore)}%;background:${COLORS[g.platform]}"></i></div><strong>${Math.round(g.risingScore)}</strong></div>`).join('') : '<p class="note">No rising data yet.</p>'}</section>`;
+  // Mobile (iOS, Android) sits in its own tab and has no player counts, so it is left out of the global view.
+  const rows = PLATFORMS.filter((p) => !['ios', 'android'].includes(p)).flatMap((p) => risers(p, 3).map((g) => ({ ...g, platform: p }))).sort((a, b) => b.risingScore - a.risingScore);
+  return `<section class="card global-graph"><h2>Global rising signal</h2><p class="sub">Top rising games across Roblox, Poki and CrazyGames, on the same 0–100 score scale.</p>${rows.length ? rows.map((g) => `<div class="global-row" data-open="${g.platform}:${esc(g.id)}"><span class="global-name">${icon(g)}<b class="pill ${g.platform}">${NAMES[g.platform]}</b><span class="global-title">${esc(g.name)}</span></span><div class="global-track"><i style="width:${Math.max(3, g.risingScore)}%;background:${COLORS[g.platform]}"></i></div><strong>${Math.round(g.risingScore)}</strong></div>`).join('') : '<p class="note">No rising data yet.</p>'}</section>`;
 }
 
 const relTs = (g) => Date.parse(g.created || g.published || g.released) || null;
@@ -440,6 +441,16 @@ function socialLookup() {
   return `<section class="card"><h2>#${esc(r.name)} ${r.game ? '<span class="game-tag">game</span>' : ''}</h2><p class="sub">Today on this server: ${full(r.uses)} uses from ${full(r.accounts)} accounts ${growthChip(r)}</p><p class="note"><a href="${esc(r.url)}" target="_blank" rel="noopener">View #${esc(r.name)} on ${esc(r.instance)} ↗</a></p></section>`;
 }
 
+// YouTube uploads from the watched channels (src/youtube.mjs), ranked by views per hour since upload.
+function youtubeCard(keep) {
+  const yt = state.data?.social?.youtube;
+  if (!yt) return '';
+  const videos = (yt.videos ?? []).filter(keep);
+  const rows = videos.map((v) => `<a class="yt-row" href="${esc(v.url)}" target="_blank" rel="noopener"><img src="${esc(v.thumbnail ?? '')}" alt="" loading="lazy"><span class="yt-main"><b>${esc(v.title)}</b><small>${esc(v.channel)} · ${ageStr(v.ageDays)} · ${Math.round(v.viewsPerHour).toLocaleString('en')} views/h</small></span></a>`).join('');
+  const missing = (yt.channels ?? []).filter((c) => !c.ok).map((c) => c.name);
+  return `<section class="card"><h2>YouTube</h2><p class="sub">Latest uploads from ${(yt.channels ?? []).length} watched channels, ranked by views per hour. Discovery is limited to these channels.</p>${missing.length ? `<p class="note">Could not read: ${esc(missing.join(', '))}.</p>` : ''}${rows || '<p class="note">No recent uploads in this view.</p>'}</section>`;
+}
+
 function socialView() {
   const s = state.data?.social;
   const f = state.social.filter;
@@ -458,6 +469,7 @@ function socialView() {
     <section class="card"><h2>Trending posts</h2><p class="sub">The most boosted posts right now.</p>${posts.map(socialPost).join('') || '<p class="note">Nothing trending in this view.</p>'}</section>
   </div>
   ${newsCard}
+  ${youtubeCard(keep)}
   ${s.gameTags?.length && f !== 'other' ? `<section class="card"><h2>Game hashtags</h2><p class="sub">Usage of game tags today.</p>${s.gameTags.map(socialTagRow).join('')}</section>` : ''}
   <p class="note">${SOCIAL_NOTE} Updated ${ago(s.updatedAt)}.</p>`;
 }
