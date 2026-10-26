@@ -1,7 +1,7 @@
 {
   "name": "game-radar",
   "productName": "Game Radar",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Tray app that tracks the top and fastest-rising games on Roblox and Poki",
   "author": "Boop Games",
   "type": "module",
@@ -27,10 +27,20 @@
       "output": "release"
     },
     "files": [
+      "bin/**/*",
       "src/**/*",
       "public/**/*",
       "build/icon.png",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/skill",
+        "to": "skill",
+        "filter": [
+          "SKILL.md"
+        ]
+      }
     ],
     "win": {
       "target": [
@@ -46,6 +56,7 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
+      "include": "build/installer.nsh",
       "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,

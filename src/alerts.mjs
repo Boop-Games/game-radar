@@ -5,6 +5,7 @@ const STALE = 6 * 3600e3; // after a long gap everything looks "new", so don't a
 const detail = (platform, g) => {
   if (platform === 'roblox') return `${g.playing.toLocaleString('en-US')} playing`;
   if (platform === 'poki') return g.live != null ? `${g.live.toLocaleString('en-US')}+ live` : 'now popular';
+  if (platform === 'crazygames') return `Hot #${g.rank}`;
   return `Top Free #${g.rank}`;
 };
 

@@ -123,6 +123,57 @@ export function scorePoki(games, history, now) {
   }
 }
 
+// CrazyGames: no live player counts, so popularity is position in the Hot list and rising is vote
+// velocity, Hot-list climb, a New list appearance and freshness.
+export function scoreCrazyGames(games, history, now) {
+  const vpd = (g) => (g.ageDays == null ? null : g.ratingCount / Math.max(g.ageDays, 7));
+  const maxVpd = Math.max(...games.map((g) => vpd(g) ?? 0), 1);
+
+  for (const g of games) {
+    const hist = history[`crazygames:${g.id}`];
+    const base = baselineFor(hist, now);
+    const life = vpd(g);
+    g.votesPerDay = life;
+    const hotSize = g.chartSize?.rank || 40;
+
+    let accel = null;
+    let climb = null;
+    if (base) {
+      g.windowHours = base.hours;
+      if (base.hours >= 3 && life) {
+        accel = (g.ratingCount - base.v) / (base.hours / 24) / life; // recent votes/day vs lifetime average
+        g.accel = accel;
+      }
+      if (g.rank && base.rank) {
+        g.rankDelta = base.rank - g.rank; // positive = moved up
+        climb = clamp(g.rankDelta / 10);
+      } else if (g.rank && !base.rank) climb = 0.7; // newly on the Hot list
+    }
+
+    const { score, components } = combine([
+      { label: 'Votes per day since launch', weight: 0.25, value: life == null ? null : clamp(Math.log10(life + 1) / Math.log10(maxVpd + 1)) },
+      { label: 'Position in the Hot list', weight: 0.25, value: g.rank ? 1 - (g.rank - 1) / hotSize : 0 },
+      { label: 'Freshness', weight: 0.15, value: g.ageDays == null ? null : Math.exp(-g.ageDays / 200) },
+      { label: 'New list placement', weight: 0.1, value: g.newRank ? 1 - (g.newRank - 1) / (g.chartSize?.newRank || 40) : 0 },
+      { label: 'Climb in the Hot list', weight: 0.1, value: climb },
+      { label: 'Vote acceleration', weight: 0.1, value: accel == null ? null : clamp((accel - 1) / 2) },
+      { label: 'Player approval', weight: 0.05, value: g.likeRatio == null ? null : clamp((g.likeRatio - 0.6) / 0.4) },
+    ]);
+    g.risingScore = score;
+    g.components = components;
+
+    const why = [];
+    if (g.rankDelta >= 3) why.push(`Up ${g.rankDelta} spots in Hot`);
+    if (accel != null && accel >= 1.3) why.push(`Votes ${accel.toFixed(1)}x faster than average`);
+    if (g.newRank && g.newRank <= 20) why.push(`New list #${g.newRank}`);
+    if (g.ageDays != null && g.ageDays < 60) why.push(`Published ${Math.max(1, Math.round(g.ageDays))}d ago`);
+    if (life && g.ageDays != null && g.ageDays < 365) why.push(`${Math.round(life).toLocaleString('en-US')} votes/day`);
+    if (g.rank && g.rank <= 20) why.push(`Hot #${g.rank}`);
+    g.reasons = why;
+    g.hist = thin((hist ?? []).map((p) => [p[0], p[1], p[2], p[3]]));
+  }
+}
+
 // iOS and Android: no player counts exist, so popularity is chart position and rising is
 // ratings velocity, chart climb, a New chart appearance (iOS) and install-bucket steps (Android).
 export function scoreMobile(games, history, now) {
