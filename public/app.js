@@ -4,6 +4,7 @@ const $ = (s) => document.querySelector(s);
 const PLATFORMS = ['roblox', 'poki', 'crazygames', 'ios', 'android'];
 const COLORS = { roblox: 'var(--roblox)', poki: 'var(--poki)', crazygames: 'var(--crazygames)', ios: 'var(--ios)', android: 'var(--android)' };
 const NAMES = { roblox: 'Roblox', poki: 'Poki', crazygames: 'CrazyGames', ios: 'iOS', android: 'Android' };
+const ERROR_NAMES = { social: 'Social', pokiTests: 'Poki tests' };
 const isMobile = (p) => p === 'ios' || p === 'android';
 const perPlatform = (v) => Object.fromEntries(PLATFORMS.map((p) => [p, typeof v === 'function' ? v(p) : v]));
 
@@ -13,6 +14,7 @@ const state = {
   tab: location.hash.slice(1) || 'overview',
   mobile: 'ios', // which store the Mobile tab shows: 'ios' or 'android'
   social: { q: '', filter: 'all', result: null }, // result: the last hashtag lookup, or { notFound: name }
+  tests: { company: '', status: 'all', q: '', limit: 100 }, // Poki tests tab; company is a team id (or dev:<name>)
   q: perPlatform(''),
   cat: perPlatform(''),
   sort: { roblox: ['playing', -1], poki: ['live', -1], crazygames: ['rank', 1], ios: ['rank', 1], android: ['rank', 1] },
@@ -483,6 +485,79 @@ async function lookupHashtag(name) {
   render();
 }
 
+// ---------- Poki tests ----------
+// Unreleased games Poki is testing on real category pages (Web Fit Tests), grouped by the developer's
+// Poki for Developers team, so a company can be followed across names and games.
+const TEST_STATUS = { testing: ['In test', 'up'], ended: ['Test ended', ''], released: ['Released', 'up'], removed: ['Removed', 'dn'] };
+const TEST_FILTERS = { all: 'All', testing: 'In test', ended: 'Test ended', released: 'Released', removed: 'Removed' };
+const testGames = () => state.data?.pokiTests?.games ?? [];
+const companyKey = (g) => g.teamId || `dev:${g.developer}`;
+const dayStr = (iso) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '–');
+
+function testCompanies() {
+  const by = new Map();
+  for (const g of testGames()) {
+    const c = by.get(companyKey(g)) ?? by.set(companyKey(g), { key: companyKey(g), names: new Set(), games: [] }).get(companyKey(g));
+    c.names.add(g.developer);
+    c.games.push(g);
+  }
+  return [...by.values()]
+    .map((c) => ({ ...c, name: c.games[0].developer, testing: c.games.filter((g) => g.status === 'testing').length, released: c.games.filter((g) => g.status === 'released').length }))
+    .sort((a, b) => b.games.length - a.games.length || b.testing - a.testing || a.name.localeCompare(b.name));
+}
+
+function testRow(g, showCompany) {
+  const [label, cls] = TEST_STATUS[g.status] ?? [g.status, ''];
+  const watched = g.status === 'testing' ? `since ${dayStr(g.firstSeen)}` : `${dayStr(g.firstSeen)} – ${dayStr(g.endedAt ?? g.lastSeen)}`;
+  const votes = g.ratingCount ? `${full(g.ratingCount)}<small>${pct(g.upCount / g.ratingCount)} liked</small>` : '–';
+  return `<tr>
+    <td><div class="g">${icon(g)}<span><a href="${esc(g.url)}" target="_blank" rel="noopener">${esc(g.name)}</a>${g.onNew ? ' <span class="game-tag">on New</span>' : ''}</span></div></td>
+    ${showCompany ? `<td><button class="linkish" data-test-company="${esc(companyKey(g))}">${esc(g.developer)}</button></td>` : ''}
+    <td><span class="chip ${cls}">${label}</span>${g.status === 'released' && g.releasedAt ? `<div class="meta">${dayStr(g.releasedAt)}</div>` : ''}</td>
+    <td class="num">${dayStr(g.uploadedAt)}<div class="meta">${g.uploadedAt ? ageStr((Date.now() - Date.parse(g.uploadedAt)) / 86400e3) + ' ago' : ''}</div></td>
+    <td class="num">${watched}</td>
+    <td><div class="tags">${(g.categories ?? []).map((c) => `<span class="tag">${esc(c)}</span>`).join('') || '<span class="muted">–</span>'}</div></td>
+    <td class="r num val">${votes}</td>
+  </tr>`;
+}
+
+function playtestsView() {
+  const pt = state.data?.pokiTests;
+  const err = state.data?.errors?.pokiTests ? `<p class="note">Last crawl failed: ${esc(state.data.errors.pokiTests)}. Showing the previous data.</p>` : '';
+  if (!pt) return card('Poki tests', 'Games Poki is testing before release', pill('poki'), `<p class="note">The first crawl runs with the next refresh and takes about 15 seconds.</p>${err}`);
+  const t = state.tests;
+  const companies = testCompanies();
+  const sel = companies.find((c) => c.key === t.company);
+  const all = testGames();
+  const week = all.filter((g) => g.uploadedAt && Date.now() - Date.parse(g.uploadedAt) < 7 * 86400e3).length;
+  const q = t.q.toLowerCase();
+  const rows = (sel ? sel.games : all)
+    .filter((g) => (t.status === 'all' || g.status === t.status) && (!q || g.name.toLowerCase().includes(q) || g.developer.toLowerCase().includes(q)))
+    .sort((a, b) => (b.pokiId ?? 0) - (a.pokiId ?? 0));
+  const shown = rows.slice(0, t.limit);
+  const kpis = `<div class="kpis">
+    <div class="kpi"><div class="l">In test now</div><div class="v num">${all.filter((g) => g.status === 'testing').length}</div><div class="s">unreleased games on category pages</div></div>
+    <div class="kpi"><div class="l">Companies</div><div class="v num">${companies.length}</div><div class="s">with a game in test since tracking began</div></div>
+    <div class="kpi"><div class="l">Uploaded this week</div><div class="v num">${week}</div><div class="s">new test builds in the last 7 days</div></div>
+    <div class="kpi"><div class="l">Released after test</div><div class="v num">${all.filter((g) => g.status === 'released').length}</div><div class="s">tracked tests that went live</div></div>
+  </div>`;
+  const tools = `<div class="tools">
+    <select id="test-company"><option value="">All companies (${companies.length})</option>${companies.map((c) => `<option value="${esc(c.key)}" ${c.key === t.company ? 'selected' : ''}>${esc(c.name)} (${c.games.length})</option>`).join('')}</select>
+    <input id="testq" type="search" placeholder="Search games or companies…" value="${esc(t.q)}">
+    ${Object.entries(TEST_FILTERS).map(([k, label]) => `<button class="platform-toggle ${t.status === k ? 'on' : ''}" data-test-status="${k}">${label}</button>`).join('')}
+  </div>`;
+  const leaders = sel ? '' : card('Most active companies', 'Most games seen in test; pick one to see everything it has tested', pill('poki'), `<div class="tags">${companies.slice(0, 24).map((c) => `<button class="tag linkish" data-test-company="${esc(c.key)}">${esc(c.name)} <b>${c.games.length}</b>${c.testing ? ` · ${c.testing} in test` : ''}</button>`).join('')}</div>`);
+  const head = sel
+    ? card(esc(sel.name), `${sel.games.length} game${sel.games.length === 1 ? '' : 's'} seen in test · ${sel.testing} in test now · ${sel.released} released${sel.names.size > 1 ? ` · also listed as ${[...sel.names].filter((n) => n !== sel.name).map(esc).join(', ')}` : ''}`, `${pill('poki')} <button class="btn2" data-test-company="">All companies</button>`, '')
+    : '';
+  const table = `<div class="tablewrap"><table class="static"><thead><tr><th>Game</th>${sel ? '' : '<th>Company</th>'}<th>Status</th><th>Uploaded</th><th>Seen in test</th><th>Categories</th><th class="r">Votes</th></tr></thead>
+    <tbody>${shown.map((g) => testRow(g, !sel)).join('')}</tbody></table>
+    ${rows.length > shown.length ? `<button class="more" id="test-more">Show more (${rows.length - shown.length} left)</button>` : ''}
+    ${rows.length ? '' : '<p class="note" style="padding:14px">No games match.</p>'}</div>`;
+  return `${kpis}${tools}${leaders ? leaders + '<div style="height:18px"></div>' : ''}${head}${sel ? '<div style="height:14px"></div>' : ''}${table}
+  <p class="note">A game counts as in test when it is listed on a Poki category page but has no release date. That is Poki's Web Fit Test, which shows an unreleased game to about 10,000 players for 3 to 5 days. "Uploaded" is when the build went up. "Seen in test" is when this app saw it, so it starts at your first crawl. Companies are grouped by their Poki for Developers team. Playtests through the Mystery Tile are not visible from outside and are not included. Crawled hourly. ${pt.updatedAt ? `Last crawl ${ago(pt.updatedAt)}.` : ''}</p>${err}`;
+}
+
 function mobileView() {
   return `<div class="tools"><span class="muted">Store</span>${MOBILE_PLATFORMS.map((p) => `<button class="platform-toggle ${state.mobile === p ? 'on' : ''}" data-mobile="${p}">${NAMES[p]}</button>`).join('')}</div>${platformView(state.mobile)}`;
 }
@@ -556,8 +631,8 @@ function render() {
     html = '<div class="loading">Collecting the first snapshot… this takes a few seconds.</div>';
   } else {
     const errs = Object.entries(d.errors ?? {});
-    if (errs.length) html += `<div class="banner">Couldn't update ${errs.map(([k, v]) => `${NAMES[k]} (${esc(v)})`).join(', ')}. Showing the last good data for ${errs.length > 1 ? 'those' : 'it'}.</div>`;
-    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'mobile' ? mobileView() : state.tab === 'social' ? socialView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
+    if (errs.length) html += `<div class="banner">Couldn't update ${errs.map(([k, v]) => `${NAMES[k] ?? ERROR_NAMES[k] ?? k} (${esc(v)})`).join(', ')}. Showing the last good data for ${errs.length > 1 ? 'those' : 'it'}.</div>`;
+    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'mobile' ? mobileView() : state.tab === 'playtests' ? playtestsView() : state.tab === 'social' ? socialView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
   }
   $('#app').innerHTML = html;
   drawTable();
@@ -624,6 +699,11 @@ document.addEventListener('click', async (e) => {
   if (socialTag) return lookupHashtag(socialTag.dataset.socialTag);
   const mobileStore = t.closest('[data-mobile]');
   if (mobileStore) { state.mobile = mobileStore.dataset.mobile; closeDrawer(); return render(); }
+  const testCompany = t.closest('[data-test-company]');
+  if (testCompany) { state.tests.company = testCompany.dataset.testCompany; state.tests.limit = 100; window.scrollTo(0, 0); return render(); }
+  const testStatus = t.closest('[data-test-status]');
+  if (testStatus) { state.tests.status = testStatus.dataset.testStatus; state.tests.limit = 100; return render(); }
+  if (t.id === 'test-more') { state.tests.limit += 100; return render(); }
   const page = t.closest('[data-page]');
   if (page) { state.page = page.dataset.page; return render(); }
   const newsletter = t.closest('[data-newsletter]');
@@ -676,6 +756,15 @@ document.addEventListener('click', async (e) => {
 });
 document.addEventListener('input', (e) => {
   if (e.target.id === 'socialq') state.social.q = e.target.value;
+  if (e.target.id === 'testq') {
+    state.tests.q = e.target.value;
+    state.tests.limit = 100;
+    const pos = e.target.selectionStart;
+    render();
+    const box = $('#testq');
+    box.focus();
+    box.setSelectionRange(pos, pos);
+  }
   if (e.target.id === 'kwq') {
     state.kw.q = e.target.value;
     drawKw();
@@ -697,6 +786,7 @@ document.addEventListener('change', (e) => {
     closeDrawer();
     render();
   }
+  if (e.target.id === 'test-company') { state.tests.company = e.target.value; state.tests.limit = 100; render(); }
   if (e.target.id === 'newsletter-enabled') { state.newsletterSettings.enabled = e.target.checked; saveNewsletterSettings(); }
   if (e.target.id === 'kwsort') {
     state.kw.sort = e.target.value;

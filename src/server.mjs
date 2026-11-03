@@ -54,7 +54,7 @@ export async function startServer({ port = 4173, host = '127.0.0.1', intervalMs 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/status') return send(res, 200, status());
-    if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, social: latest?.social ?? null, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
+    if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, social: latest?.social ?? null, pokiTests: latest?.pokiTests ?? null, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
     if (url.pathname.startsWith('/api/social/tag/') && req.method === 'GET') {
       const tag = await lookupTag(decodeURIComponent(url.pathname.slice('/api/social/tag/'.length)));
       return tag ? send(res, 200, tag) : send(res, 404, { error: 'Tag not found on the instance' });

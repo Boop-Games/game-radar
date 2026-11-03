@@ -7,10 +7,12 @@ import { collectAndroid } from './android.mjs';
 import { scoreRoblox, scorePoki, scoreCrazyGames, scoreMobile } from './scoring.mjs';
 import { computeTerms } from './terms.mjs';
 import { collectSocial } from './social.mjs';
+import { collectPokiTests } from './pokitests.mjs';
 import { loadHistory, saveHistory, loadLatest, saveLatest, saveSnapshot, appendHistory } from './store.mjs';
 
 const MOBILE_EVERY = (Number(process.env.MOBILE_REFRESH_MINUTES) || 30) * 60e3;
 const SOCIAL_EVERY = (Number(process.env.SOCIAL_REFRESH_MINUTES) || 15) * 60e3;
+const POKI_TESTS_EVERY = (Number(process.env.POKI_TESTS_REFRESH_MINUTES) || 60) * 60e3;
 
 // `every` is how often a platform is re-fetched. Mobile needs one request per app on Google Play and
 // its charts move slowly, so it refreshes less often than Roblox and Poki.
@@ -31,6 +33,7 @@ export async function runCollection({ only } = {}) {
   const due = SOURCES.filter((s) => (only ? only.includes(s.name) : !prev?.[s.name] || now - prev[s.name].updatedAt >= s.every - 5000));
 
   const socialDue = only ? only.includes('social') : !prev?.social || now - prev.social.updatedAt >= SOCIAL_EVERY - 5000;
+  const pokiTestsDue = only ? only.includes('pokiTests') : !prev?.pokiTests || now - prev.pokiTests.updatedAt >= POKI_TESTS_EVERY - 5000;
 
   const results = await Promise.allSettled(due.map((s) => s.collect()));
   const snap = { updatedAt: now, errors: {} };
@@ -43,6 +46,16 @@ export async function runCollection({ only } = {}) {
     } catch (e) {
       snap.errors.social = e.message;
       console.warn(`[social] collection failed: ${e.message}`);
+    }
+  }
+  // Poki games in test, crawled hourly from every category page. Like social, not scored.
+  snap.pokiTests = prev?.pokiTests ?? null;
+  if (pokiTestsDue) {
+    try {
+      snap.pokiTests = await collectPokiTests(now);
+    } catch (e) {
+      snap.errors.pokiTests = e.message;
+      console.warn(`[poki-tests] collection failed: ${e.message}`);
     }
   }
 

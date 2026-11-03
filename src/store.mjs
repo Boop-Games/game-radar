@@ -27,6 +27,10 @@ export const loadHistory = () => readJson('history.json', {});
 export const saveHistory = (h) => writeJson('history.json', h);
 export const loadLatest = () => readJson('latest.json', null);
 export const saveLatest = (s) => writeJson('latest.json', s);
+// Every Poki game ever seen in test, kept for good (history.json forgets after a week).
+// `released` maps slugs already known to be released to their release date, so they are never re-checked.
+export const loadPokiTests = async () => ({ games: {}, released: {}, ...(await readJson('poki-tests.json', {})) });
+export const savePokiTests = (s) => writeJson('poki-tests.json', s);
 
 // Keep complete point-in-time snapshots separately from latest.json. This preserves every
 // collected field for multi-day analysis while pruning old captures to a bounded window.

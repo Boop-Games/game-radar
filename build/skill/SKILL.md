@@ -22,6 +22,7 @@ Output is JSON when piped. Add `--format table` for a readable table.
 - `game <platform> "<name>" --full`: one game's full record.
 - `search <text>`: find a title on any platform.
 - `keywords all`: title-word themes and their momentum.
+- `playtests companies`: companies with unreleased games in Poki tests. `playtests "<company>"` lists every game that company has had in test, with status (`testing`, `ended`, `released`, `removed`), upload date and categories.
 
 JSON results include `stale`, which is true when the data is more than 20 minutes old. Call `refresh --platform <name> --wait` to update one platform, or `refresh` for all.
 

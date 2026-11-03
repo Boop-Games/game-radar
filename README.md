@@ -18,6 +18,7 @@ The installer is unsigned, so Windows SmartScreen may show a warning: choose **M
 
 - **Roblox:** the public explore and games APIs (live players, votes, Up-and-Coming and Trending lists).
 - **Poki:** the Popular and New lists, per-game vote counts, Poki's own Trending rank and its rounded "live players" estimate (1,000+, 5,000+ ...). Poki has no public API, so this reads its public pages and may break if the site changes.
+- **Poki tests:** unreleased games Poki is testing on real category pages (its Web Fit Test). Every category list is crawled hourly; a listed game with no release date is in test. The Poki tests tab groups them by company (Poki for Developers team) and keeps every game ever seen in test in `poki-tests.json`, marking when it ended, released or was removed. Mystery Tile playtests are not visible from outside and are not included.
 - **Rising score (0-100):** growth, chart placement, freshness, approval and scale. Growth and trend arrows compare against ~24h ago, so they fill in after the app has run for a day.
 - **iOS / Android:** US Top Free and Grossing charts, ratings and release metadata. Mobile has no player counts; Android uses an unofficial Play scraper.
 - **Keywords:** common words and phrases across game titles, weighted by live players or mobile chart position.

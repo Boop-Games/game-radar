@@ -14,7 +14,8 @@ async function dataDir(flag) {
   return candidates.at(-1);
 }
 const usage = `Game Radar CLI
-Usage: game-radar <status|top|rising|list|game|search|keywords|report|refresh|help> [options]
+Usage: game-radar <status|top|rising|list|game|search|keywords|playtests|report|refresh|help> [options]
+Poki tests: game-radar playtests [company|companies] [--status testing|ended|released|removed]   (unreleased games Poki is testing, by company)
 Reports: game-radar report submit [--file report.md] [--title T] [--summary S] [--kind K]   (markdown on stdin if no --file)
 Platforms: Roblox uses live players; Poki live is bucketed and ties use Popular rank; CrazyGames has no player counts and uses its Hot list rank; iOS/Android have no player counts and use Top Free chart rank; Android uses an unofficial Play scraper; all data is US by default.
 JSON fields: position is the platform ordering, risingScore is 0-100, reasons explains the score, hist is raw history with [time, primary, chart rank, extra].
@@ -23,7 +24,7 @@ const fail = (msg, code = 1) => { if (wantJson) console.log(JSON.stringify({ err
 let wantJson = false;
 const argv = process.argv.slice(2), command = argv[0] || 'help', platformArg = argv[1];
 let opts;
-try { opts = parseArgs({ args: argv.slice(1), options: { data: { type: 'string' }, format: { type: 'string' }, json: { type: 'boolean', short: 'j' }, full: { type: 'boolean' }, fields: { type: 'string' }, limit: { type: 'string', short: 'n' }, sort: { type: 'string' }, asc: { type: 'boolean' }, genre: { type: 'string' }, 'max-age-days': { type: 'string' }, search: { type: 'string' }, 'no-phrases': { type: 'boolean' }, wait: { type: 'boolean' }, platform: { type: 'string' }, file: { type: 'string' }, title: { type: 'string' }, summary: { type: 'string' }, kind: { type: 'string' }, source: { type: 'string' } }, allowPositionals: true }).values; } catch (e) { fail(e.message); process.exit(); }
+try { opts = parseArgs({ args: argv.slice(1), options: { data: { type: 'string' }, format: { type: 'string' }, json: { type: 'boolean', short: 'j' }, full: { type: 'boolean' }, fields: { type: 'string' }, limit: { type: 'string', short: 'n' }, sort: { type: 'string' }, asc: { type: 'boolean' }, genre: { type: 'string' }, 'max-age-days': { type: 'string' }, search: { type: 'string' }, 'no-phrases': { type: 'boolean' }, wait: { type: 'boolean' }, platform: { type: 'string' }, status: { type: 'string' }, file: { type: 'string' }, title: { type: 'string' }, summary: { type: 'string' }, kind: { type: 'string' }, source: { type: 'string' } }, allowPositionals: true }).values; } catch (e) { fail(e.message); process.exit(); }
 wantJson = opts.json || opts.format === 'json' || !process.stdout.isTTY;
 const format = opts.format || (process.stdout.isTTY ? 'table' : 'json');
 if (command === 'help' || opts.help) { console.log(usage); process.exit(0); }
@@ -42,6 +43,24 @@ else if (command === 'list') { if (!PLATFORMS.includes(platformArg)) fail('list 
 else if (command === 'search') { const q = platformArg?.toLowerCase() || ''; emit(envelope(PLATFORMS.flatMap(p => (snapshot[p]?.games || []).filter(g => g.name.toLowerCase().includes(q)).map((g,i) => compact({ ...g, platform:p }, i+1))), 'all')); }
 else if (command === 'game') { const p = platformArg, q = argv[2]?.toLowerCase(); const gs = snapshot[p]?.games || []; const hits = gs.filter(g => g.id === q || g.name.toLowerCase().includes(q || '')); if (hits.length !== 1) { fail(hits.length ? `Ambiguous match: ${hits.map(g=>g.name).join(', ')}` : 'Game not found', 2); } else emit(envelope([opts.full ? hits[0] : compact({ ...hits[0], platform:p }, 1)], p)); }
 else if (command === 'keywords') { const ps = selected; const items = ps.flatMap(p => (snapshot[p]?.terms || []).filter(t => opts['no-phrases'] ? !t.phrase : true).slice(0, Number(opts.limit || 25)).map(t => ({ platform:p, ...t }))); emit(envelope(items, platformArg)); }
+else if (command === 'playtests') {
+  // Unreleased games seen in Poki's Web Fit Tests. The argument is a company name (substring), a team id, or "companies".
+  const all = snapshot.pokiTests?.games || [];
+  const key = (g) => g.teamId || `dev:${g.developer}`;
+  const test = (g, i) => ({ position: i + 1, id: g.slug, name: g.name, developer: g.developer, teamId: g.teamId, status: g.status, uploadedAt: g.uploadedAt, firstSeen: g.firstSeen && new Date(g.firstSeen).toISOString(), lastSeen: g.lastSeen && new Date(g.lastSeen).toISOString(), releasedAt: g.releasedAt, categories: g.categories, votes: g.ratingCount, liked: g.ratingCount ? Math.round(g.upCount / g.ratingCount * 100) / 100 : null, url: g.url });
+  const byStatus = (gs) => (opts.status ? gs.filter((g) => g.status === opts.status) : gs);
+  if (!snapshot.pokiTests) fail('No Poki test data yet. Run game-radar refresh --platform pokiTests', 2);
+  else if (platformArg === 'companies') {
+    const groups = new Map();
+    for (const g of byStatus(all)) (groups.get(key(g)) ?? groups.set(key(g), []).get(key(g))).push(g);
+    const items = [...groups.values()].map((gs) => ({ name: gs[0].developer, teamId: gs[0].teamId, games: gs.length, testing: gs.filter((g) => g.status === 'testing').length, released: gs.filter((g) => g.status === 'released').length, titles: gs.map((g) => g.name) })).sort((a, b) => b.games - a.games || b.testing - a.testing).map((c, i) => ({ position: i + 1, ...c }));
+    emit(envelope(items.slice(0, Number(opts.limit || items.length)), 'poki'));
+  } else {
+    const q = platformArg?.toLowerCase();
+    const gs = byStatus(q ? all.filter((g) => g.teamId === platformArg || g.developer.toLowerCase().includes(q)) : all);
+    emit(envelope((opts.full ? gs : gs.map(test)).slice(0, Number(opts.limit || gs.length)), 'poki'));
+  }
+}
 else if (command === 'report' && platformArg === 'submit') {
   const readStdin = async () => { if (process.stdin.isTTY) return ''; let s = ''; for await (const c of process.stdin) s += c; return s; };
   const text = opts.file ? await readFile(opts.file, 'utf8') : await readStdin();
