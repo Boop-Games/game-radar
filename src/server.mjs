@@ -8,6 +8,7 @@ import { findAlerts } from './alerts.mjs';
 import { PLATFORMS } from './rank.mjs';
 import { lookupTag } from './social.mjs';
 import { loadNewsletterSettings, saveNewsletterSettings, listNewsletters, createNewsletter, runNewsletterSchedule } from './newsletter.mjs';
+import { loadPlaytests, loadCandidates } from './playtests.mjs';
 
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
@@ -54,7 +55,7 @@ export async function startServer({ port = 4173, host = '127.0.0.1', intervalMs 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/status') return send(res, 200, status());
-    if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, social: latest?.social ?? null, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
+    if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, social: latest?.social ?? null, playtests: await loadPlaytests(), playtestCandidates: await loadCandidates(), ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
     if (url.pathname.startsWith('/api/social/tag/') && req.method === 'GET') {
       const tag = await lookupTag(decodeURIComponent(url.pathname.slice('/api/social/tag/'.length)));
       return tag ? send(res, 200, tag) : send(res, 404, { error: 'Tag not found on the instance' });

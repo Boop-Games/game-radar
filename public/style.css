@@ -74,7 +74,9 @@ main { max-width: 1320px; margin: 0 auto; padding: 24px; }
 .report-content > h2:first-of-type { border-top: 0; padding-top: 0; }
 .report-content img { max-width: 100%; border-radius: 12px; }
 .report-content li { margin: 6px 0; }
-.report-content li img { width: 44px; height: 44px; object-fit: cover; vertical-align: middle; margin: 0 10px 0 0; border-radius: 10px; }
+.report-content li img { width: 32px; height: 32px; object-fit: cover; vertical-align: middle; margin: -3px 10px 0 0; border-radius: 8px; }
+.report-table img { width: 24px; height: 24px; object-fit: cover; vertical-align: middle; margin: -3px 8px 0 0; border-radius: 6px; }
+.report-content img { max-height: 320px; }
 .report-content ul:has(> li > img) { list-style: none; padding-left: 0; }
 .report-content blockquote { margin: 14px 0; padding: 12px 16px; border-left: 3px solid var(--rise); background: var(--panel2); border-radius: 10px; color: var(--muted); }
 .report-content blockquote strong { color: var(--rise); }
@@ -222,6 +224,29 @@ td .g span { max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
 }
 .tools input[type=checkbox] { min-width: 0; }
 
+/* Launches tab: Poki playtests and CrazyGames Basic Launch */
+.launch-row { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 8px 6px; border-radius: 9px; color: inherit; text-decoration: none; }
+a.launch-row:hover, .launch-row:hover { background: var(--panel2); }
+.launch-row .ic.initial { display: grid; place-items: center; font-weight: 700; font-size: 18px; color: var(--poki); background: rgba(74,163,255,.15); }
+.launch-main { display: flex; flex-direction: column; min-width: 0; }
+.launch-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.launch-main small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.launch-meter { display: grid; gap: 4px; min-width: 150px; justify-items: end; }
+.launch-meter .bar { width: 100%; margin-top: 0; }
+.launch-meter small { color: var(--muted); font-size: 11.5px; }
+@media (max-width: 560px) { .launch-row { grid-template-columns: 38px minmax(0,1fr); } .launch-meter { grid-column: 2; justify-items: start; min-width: 0; } }
+
+/* Social tab: video grid and the collapsed hashtag panel */
+.vid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.vid { display: flex; flex-direction: column; gap: 4px; min-width: 0; color: inherit; text-decoration: none; padding: 6px; border-radius: 12px; }
+.vid:hover { background: var(--panel2); }
+.vid-thumb { aspect-ratio: 16 / 9; border-radius: 9px; overflow: hidden; background: var(--line); margin-bottom: 4px; }
+.vid-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vid b { font-size: 13.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vid small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vid-rate { color: var(--rise) !important; font-weight: 600; }
+.social-more { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 22px 0 14px; }
+
 /* YouTube card on the Social tab */
 .yt-row { display: grid; grid-template-columns: 128px 1fr; gap: 12px; align-items: center; padding: 7px 6px; border-radius: 9px; color: inherit; text-decoration: none; }
 .yt-row:hover { background: var(--panel2); }
@@ -230,3 +255,4 @@ td .g span { max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
 .yt-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .yt-main small { color: var(--muted); }
 @media (max-width: 560px) { .yt-row { grid-template-columns: 96px 1fr; } .yt-row img { width: 96px; height: 54px; } }
+.launch-sub { margin: 16px 6px 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }

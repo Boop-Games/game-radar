@@ -12,7 +12,7 @@ const state = {
   status: null,
   tab: location.hash.slice(1) || 'overview',
   mobile: 'ios', // which store the Mobile tab shows: 'ios' or 'android'
-  social: { q: '', filter: 'all', result: null }, // result: the last hashtag lookup, or { notFound: name }
+  social: { q: '', filter: 'games', result: null, more: false }, // result: the last hashtag lookup, or { notFound: name }
   q: perPlatform(''),
   cat: perPlatform(''),
   sort: { roblox: ['playing', -1], poki: ['live', -1], crazygames: ['rank', 1], ios: ['rank', 1], android: ['rank', 1] },
@@ -442,36 +442,52 @@ function socialLookup() {
 }
 
 // YouTube uploads from the watched channels (src/youtube.mjs), ranked by views per hour since upload.
-function youtubeCard(keep) {
+// Videos are the focus of the tab, so they are always shown; the hashtag filter does not apply to them.
+const postedAgo = (d) => (d < 1 ? 'today' : `${ageStr(d)} ago`);
+function videoCard(v) {
+  return `<a class="vid" href="${esc(v.url)}" target="_blank" rel="noopener"><div class="vid-thumb"><img src="${esc(v.thumbnail ?? '')}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></div><b>${esc(v.title)}</b><small>${esc(v.channel)} · ${postedAgo(v.ageDays)}</small><small class="vid-rate">${full(v.views)} views · ${full(v.viewsPerHour)}/h</small></a>`;
+}
+
+function youtubeSection() {
   const yt = state.data?.social?.youtube;
-  if (!yt) return '';
-  const videos = (yt.videos ?? []).filter(keep);
-  const rows = videos.map((v) => `<a class="yt-row" href="${esc(v.url)}" target="_blank" rel="noopener"><img src="${esc(v.thumbnail ?? '')}" alt="" loading="lazy"><span class="yt-main"><b>${esc(v.title)}</b><small>${esc(v.channel)} · ${ageStr(v.ageDays)} · ${Math.round(v.viewsPerHour).toLocaleString('en')} views/h</small></span></a>`).join('');
+  if (!yt) return '<section class="card"><h2>YouTube</h2><p class="note">No YouTube data yet. It refreshes every 15 minutes.</p></section>';
   const missing = (yt.channels ?? []).filter((c) => !c.ok).map((c) => c.name);
-  return `<section class="card"><h2>YouTube</h2><p class="sub">Latest uploads from ${(yt.channels ?? []).length} watched channels, ranked by views per hour. Discovery is limited to these channels.</p>${missing.length ? `<p class="note">Could not read: ${esc(missing.join(', '))}.</p>` : ''}${rows || '<p class="note">No recent uploads in this view.</p>'}</section>`;
+  const videos = yt.videos ?? [];
+  return `<section class="card"><h2>YouTube</h2><p class="sub">Newest uploads from ${(yt.channels ?? []).length} watched channels in the last two weeks, fastest-growing first (views per hour since upload). Existing games are left out, except Roblox; Minecraft and other established games only appear when the news is new.</p>${missing.length ? `<p class="note">Could not read: ${esc(missing.join(', '))}.</p>` : ''}${videos.length ? `<div class="vid-grid">${videos.map(videoCard).join('')}</div>` : '<p class="note">No recent uploads.</p>'}</section>`;
+}
+
+// Mastodon hashtags and posts. Hidden by default because most trending tags are unrelated to games.
+function hashtagPanel(s) {
+  const f = state.social.filter;
+  const keep = (x) => f === 'all' || (f === 'games' ? x.game : !x.game);
+  const filters = Object.entries(SOCIAL_FILTERS).map(([k, label]) => `<button class="platform-toggle ${f === k ? 'on' : ''}" data-social-filter="${k}">${label}</button>`).join('');
+  const emerging = (s.emerging ?? []).filter(keep);
+  const news = (s.inNews ?? []).filter(keep);
+  const tags = s.tags.filter(keep);
+  const posts = s.posts.filter(keep);
+  const emergingCard = `<section class="card"><h2>Emerging topics</h2><p class="sub">Topics that jumped from a small base and are used by many different accounts.</p>${emerging.map(socialTagRow).join('') || '<p class="note">Nothing emerging in this view.</p>'}</section>`;
+  const newsCard = news.length ? `<section class="card"><h2>In the news</h2><p class="sub">Tags that match a headline on the server's trending links.</p>${news.map(socialTagRow).join('')}</section>` : '';
+  return `<div class="tools"><input id="socialq" type="search" placeholder="Look up any hashtag, e.g. clickies" value="${esc(state.social.q)}"><span class="muted">Show</span>${filters}</div>
+  ${socialLookup()}
+  <div class="cols">
+    ${emergingCard}
+    <section class="card"><h2>Trending hashtags</h2><p class="sub">Most used on the server today. Click one to look it up.</p>${tags.map(socialTagRow).join('') || '<p class="note">Nothing trending in this view.</p>'}</section>
+  </div>
+  ${newsCard}
+  <div class="cols">
+    <section class="card"><h2>Trending posts</h2><p class="sub">The most boosted posts right now.</p>${posts.map(socialPost).join('') || '<p class="note">Nothing trending in this view.</p>'}</section>
+    <section class="card"><h2>Game hashtags</h2><p class="sub">Usage of game tags today.</p>${(s.gameTags ?? []).map(socialTagRow).join('') || '<p class="note">No game tags.</p>'}</section>
+  </div>
+  <p class="note">${SOCIAL_NOTE}</p>`;
 }
 
 function socialView() {
   const s = state.data?.social;
-  const f = state.social.filter;
-  const head = `<div class="tools"><input id="socialq" type="search" placeholder="Look up any hashtag, e.g. clickies" value="${esc(state.social.q)}"><span class="muted">Show</span>${Object.entries(SOCIAL_FILTERS).map(([k, label]) => `<button class="platform-toggle ${f === k ? 'on' : ''}" data-social-filter="${k}">${label}</button>`).join('')}</div>${socialLookup()}`;
-  if (!s) return `${head}<div class="card"><h2>Social trends</h2><p class="note">No social data yet. It refreshes every 15 minutes.</p></div>`;
-  const keep = (x) => f === 'all' || (f === 'games' ? x.game : !x.game);
-  const tags = s.tags.filter(keep);
-  const posts = s.posts.filter(keep);
   const errNote = state.data?.errors?.social ? `<p class="note">Last social refresh failed: ${esc(state.data.errors.social)}. Showing the previous data.</p>` : '';
-  const emerging = (s.emerging ?? []).filter(keep);
-  const news = (s.inNews ?? []).filter(keep);
-  const emergingCard = `<section class="card"><h2>Emerging topics</h2><p class="sub">Topics that jumped from a small base and are used by many different accounts, so they are not one brand's campaign. Brands and people can still appear here.</p>${emerging.map(socialTagRow).join('') || '<p class="note">Nothing emerging in this view.</p>'}</section>`;
-  const newsCard = news.length ? `<section class="card"><h2>In the news</h2><p class="sub">Tags that match a headline on the server's trending links. Shown separately.</p>${news.map(socialTagRow).join('')}</section>` : '';
-  return `${head}${errNote}${emergingCard}<div class="cols">
-    <section class="card"><h2>Trending hashtags</h2><p class="sub">Most used on the server today. Click one to look it up.</p>${tags.map(socialTagRow).join('') || '<p class="note">Nothing trending in this view.</p>'}</section>
-    <section class="card"><h2>Trending posts</h2><p class="sub">The most boosted posts right now.</p>${posts.map(socialPost).join('') || '<p class="note">Nothing trending in this view.</p>'}</section>
-  </div>
-  ${newsCard}
-  ${youtubeCard(keep)}
-  ${s.gameTags?.length && f !== 'other' ? `<section class="card"><h2>Game hashtags</h2><p class="sub">Usage of game tags today.</p>${s.gameTags.map(socialTagRow).join('')}</section>` : ''}
-  <p class="note">${SOCIAL_NOTE} Updated ${ago(s.updatedAt)}.</p>`;
+  const more = state.social.more;
+  return `${errNote}${youtubeSection()}
+  <div class="social-more"><button class="btn2" data-social-more>${more ? 'Hide' : 'Show'} hashtags & posts from Mastodon</button><span class="note">${more ? '' : 'Mostly unrelated to games, so hidden by default.'}</span></div>
+  ${more && s ? hashtagPanel(s) : ''}`;
 }
 
 async function lookupHashtag(name) {
@@ -485,6 +501,61 @@ async function lookupHashtag(name) {
 
 function mobileView() {
   return `<div class="tools"><span class="muted">Store</span>${MOBILE_PLATFORMS.map((p) => `<button class="platform-toggle ${state.mobile === p ? 'on' : ''}" data-mobile="${p}">${NAMES[p]}</button>`).join('')}</div>${platformView(state.mobile)}`;
+}
+
+// ---------- launches: Poki playtests and CrazyGames Basic Launch ----------
+// CrazyGames Basic Launch is a 7-21 day soft release; it ends once a game has been live 7+ days and reached 500 plays.
+const BASIC_LAUNCH_WINDOW_DAYS = 21;
+const BASIC_LAUNCH_MIN_DAYS = 7;
+const BASIC_LAUNCH_MIN_PLAYS = 500;
+const daysAgo = (iso) => (Date.now() - Date.parse(iso)) / 864e5;
+const shortDate = (iso) => new Date(iso).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' });
+
+// Still in soft launch: launched within the window and not yet past both exit conditions (7+ days AND 500+ plays).
+const inSoftLaunch = (g) => daysAgo(g.basicLaunchOn) < BASIC_LAUNCH_MIN_DAYS || (g.plays ?? 0) < BASIC_LAUNCH_MIN_PLAYS;
+
+// Every CrazyGames game whose Basic Launch started within the window. Games past both exit rules are shown too, marked as such.
+function basicLaunchGames() {
+  return games('crazygames')
+    .filter((g) => g.basicLaunchOn && daysAgo(g.basicLaunchOn) <= BASIC_LAUNCH_WINDOW_DAYS)
+    .sort((a, b) => Date.parse(b.basicLaunchOn) - Date.parse(a.basicLaunchOn));
+}
+
+function basicLaunchRow(g) {
+  const elapsed = daysAgo(g.basicLaunchOn);
+  const live = inSoftLaunch(g);
+  const dayPct = Math.min(100, (elapsed / BASIC_LAUNCH_MIN_DAYS) * 100);
+  const playPct = Math.min(100, ((g.plays ?? 0) / BASIC_LAUNCH_MIN_PLAYS) * 100);
+  return `<a class="launch-row" href="${esc(g.url)}" target="_blank" rel="noopener">
+    ${icon(g)}
+    <div class="launch-main"><b>${esc(g.name)}</b><small>${esc(g.category ?? 'Games')} · basic launch ${shortDate(g.basicLaunchOn)} · day ${Math.floor(elapsed) + 1}</small></div>
+    <div class="launch-meter">
+      <span class="chip ${live ? '' : 'up'}">${live ? 'In basic launch' : 'Met exit rule'}</span>
+      <div class="bar" title="Days live: ${Math.floor(elapsed)} of ${BASIC_LAUNCH_MIN_DAYS}"><i style="width:${dayPct}%;background:var(--crazygames)"></i></div>
+      <div class="bar" title="Plays: ${full(g.plays)} of ${BASIC_LAUNCH_MIN_PLAYS}"><i style="width:${playPct}%;background:var(--crazygames)"></i></div>
+      <small>${Math.floor(elapsed)}/${BASIC_LAUNCH_MIN_DAYS} days · ${compact(g.plays)}/${compact(BASIC_LAUNCH_MIN_PLAYS)} plays</small>
+    </div>
+  </a>`;
+}
+
+function playtestRow(p) {
+  const meta = [p.startedOn ? `started ${shortDate(p.startedOn)} · ${Math.max(0, Math.floor(daysAgo(p.startedOn)))}d ago` : null, p.note].filter(Boolean).join(' · ');
+  const inner = `<span class="ic initial" aria-hidden="true">${esc(p.name.charAt(0).toUpperCase())}</span><div class="launch-main"><b>${esc(p.name)}</b><small>${esc(meta || 'In playtest')}</small></div>`;
+  return p.url ? `<a class="launch-row" href="${esc(p.url)}" target="_blank" rel="noopener">${inner}</a>` : `<div class="launch-row">${inner}</div>`;
+}
+
+function launchesView() {
+  const basic = basicLaunchGames();
+  const playtests = state.data?.playtests ?? [];
+  const scan = state.data?.playtestCandidates ?? { scannedAt: null, found: 0, items: [] };
+  const seenRows = scan.items.map((c) => `<a class="launch-row" href="${esc(c.url ?? '#')}" target="_blank" rel="noopener"><span class="ic initial" aria-hidden="true">${esc((c.name ?? '?').charAt(0).toUpperCase())}</span><div class="launch-main"><b>${esc(c.name)}</b><small>seen on the Poki homepage ${shortDate(c.firstSeen)}${c.lastSeen !== c.firstSeen ? ` · last ${shortDate(c.lastSeen)}` : ''}</small></div></a>`).join('');
+  const scanNote = scan.scannedAt ? `Homepage scanned ${ago(Date.parse(scan.scannedAt))}: ${scan.found} mystery tile${scan.found === 1 ? '' : 's'} on the page now.` : 'The Poki homepage has not been scanned yet.';
+  const pokiBody = `${playtests.map(playtestRow).join('')}${seenRows}${!playtests.length && !scan.items.length ? `<p class="note">No playtests found. ${scanNote} Poki shows playtest games as mystery tiles, and none are on the homepage for an anonymous visitor. Any tile seen on a later scan is kept here. You can also add games by hand in <code>playtests.json</code>.</p>` : `<p class="note">${scanNote}</p>`}`;
+  return `<div class="cols">
+    ${card('Poki playtests', 'Games Poki is testing with a small group of players. Found by scanning the Poki homepage for mystery tiles, plus anything you add to playtests.json.', pill('poki'), pokiBody)}
+    ${card('CrazyGames Basic Launch', `Games whose soft launch started in the last ${BASIC_LAUNCH_WINDOW_DAYS} days. Full launch follows once a game has been live ${BASIC_LAUNCH_MIN_DAYS}+ days with ${full(BASIC_LAUNCH_MIN_PLAYS)}+ plays.`, pill('crazygames'), basic.map(basicLaunchRow).join('') || `<p class="note">No CrazyGames games started Basic Launch in the last ${BASIC_LAUNCH_WINDOW_DAYS} days in the current data.</p>`)}
+  </div>
+  <p class="note">CrazyGames launch dates come from each game page, and only games in the Hot or New lists are checked.</p>`;
 }
 
 function drawTable() {
@@ -557,7 +628,7 @@ function render() {
   } else {
     const errs = Object.entries(d.errors ?? {});
     if (errs.length) html += `<div class="banner">Couldn't update ${errs.map(([k, v]) => `${NAMES[k]} (${esc(v)})`).join(', ')}. Showing the last good data for ${errs.length > 1 ? 'those' : 'it'}.</div>`;
-    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'mobile' ? mobileView() : state.tab === 'social' ? socialView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
+    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'mobile' ? mobileView() : state.tab === 'launches' ? launchesView() : state.tab === 'social' ? socialView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
   }
   $('#app').innerHTML = html;
   drawTable();
@@ -618,6 +689,7 @@ document.addEventListener('click', async (e) => {
     else state.overviewPlatforms.add(p);
     return render();
   }
+  if (t.closest('[data-social-more]')) { state.social.more = !state.social.more; return render(); }
   const socialFilter = t.closest('[data-social-filter]');
   if (socialFilter) { state.social.filter = socialFilter.dataset.socialFilter; return render(); }
   const socialTag = t.closest('[data-social-tag]');

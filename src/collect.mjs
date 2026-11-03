@@ -7,6 +7,7 @@ import { collectAndroid } from './android.mjs';
 import { scoreRoblox, scorePoki, scoreCrazyGames, scoreMobile } from './scoring.mjs';
 import { computeTerms } from './terms.mjs';
 import { collectSocial } from './social.mjs';
+import { scanPokiHomepage } from './discover.mjs';
 import { loadHistory, saveHistory, loadLatest, saveLatest, saveSnapshot, appendHistory } from './store.mjs';
 
 const MOBILE_EVERY = (Number(process.env.MOBILE_REFRESH_MINUTES) || 30) * 60e3;
@@ -62,6 +63,7 @@ export async function runCollection({ only } = {}) {
   });
   if (due.length && SOURCES.every((s) => !snap[s.name])) throw new Error('All sources failed: ' + JSON.stringify(snap.errors));
 
+  await scanPokiHomepage(now); // playtest candidates; kept in their own file, never blocks the snapshot
   await Promise.all([saveHistory(history), saveLatest(snap), saveSnapshot(snap, now)]);
   return snap;
 }

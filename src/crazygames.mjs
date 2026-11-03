@@ -29,6 +29,7 @@ function parseGame(html, slug) {
     desc: strip(`${g.metaDescription ?? ''} ${g.tags?.map((t) => t.name).join(' ') ?? ''}`).slice(0, 600),
     category: g.category?.name ?? 'Games',
     developer: g.developer,
+    basicLaunchOn: g.basicLaunchOn ?? null, // start of the 7-21 day Basic Launch soft release
     published: g.basicLaunchOn || g.addedOn, // addedOn is when the page was last (re)added, so prefer the launch date
     ratingCount: up + down,
     ratingValue: g.rating == null ? null : Math.round(g.rating * 100) / 100, // out of 10
