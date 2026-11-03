@@ -578,49 +578,6 @@ function mobileView() {
   return `<div class="tools"><span class="muted">Store</span>${MOBILE_PLATFORMS.map((p) => `<button class="platform-toggle ${state.mobile === p ? 'on' : ''}" data-mobile="${p}">${NAMES[p]}</button>`).join('')}</div>${platformView(state.mobile)}`;
 }
 
-// ---------- launches: CrazyGames Basic Launch ----------
-// CrazyGames Basic Launch is a 7-21 day soft release; it ends once a game has been live 7+ days and reached 500 plays.
-const BASIC_LAUNCH_WINDOW_DAYS = 21;
-const BASIC_LAUNCH_MIN_DAYS = 7;
-const BASIC_LAUNCH_MIN_PLAYS = 500;
-const daysAgo = (iso) => (Date.now() - Date.parse(iso)) / 864e5;
-const shortDate = (iso) => new Date(iso).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' });
-
-// Still in soft launch: launched within the window and not yet past both exit conditions (7+ days AND 500+ plays).
-const inSoftLaunch = (g) => daysAgo(g.basicLaunchOn) < BASIC_LAUNCH_MIN_DAYS || (g.plays ?? 0) < BASIC_LAUNCH_MIN_PLAYS;
-
-// Every CrazyGames game whose Basic Launch started within the window. Games past both exit rules are shown too, marked as such.
-function basicLaunchGames() {
-  return games('crazygames')
-    .filter((g) => g.basicLaunchOn && daysAgo(g.basicLaunchOn) <= BASIC_LAUNCH_WINDOW_DAYS)
-    .sort((a, b) => Date.parse(b.basicLaunchOn) - Date.parse(a.basicLaunchOn));
-}
-
-function basicLaunchRow(g) {
-  const elapsed = daysAgo(g.basicLaunchOn);
-  const live = inSoftLaunch(g);
-  const dayPct = Math.min(100, (elapsed / BASIC_LAUNCH_MIN_DAYS) * 100);
-  const playPct = Math.min(100, ((g.plays ?? 0) / BASIC_LAUNCH_MIN_PLAYS) * 100);
-  return `<a class="launch-row" href="${esc(g.url)}" target="_blank" rel="noopener">
-    ${icon(g)}
-    <div class="launch-main"><b>${esc(g.name)}</b><small>${esc(g.category ?? 'Games')} · basic launch ${shortDate(g.basicLaunchOn)} · day ${Math.floor(elapsed) + 1}</small></div>
-    <div class="launch-meter">
-      <span class="chip ${live ? '' : 'up'}">${live ? 'In basic launch' : 'Met exit rule'}</span>
-      <div class="bar" title="Days live: ${Math.floor(elapsed)} of ${BASIC_LAUNCH_MIN_DAYS}"><i style="width:${dayPct}%;background:var(--crazygames)"></i></div>
-      <div class="bar" title="Plays: ${full(g.plays)} of ${BASIC_LAUNCH_MIN_PLAYS}"><i style="width:${playPct}%;background:var(--crazygames)"></i></div>
-      <small>${Math.floor(elapsed)}/${BASIC_LAUNCH_MIN_DAYS} days · ${compact(g.plays)}/${compact(BASIC_LAUNCH_MIN_PLAYS)} plays</small>
-    </div>
-  </a>`;
-}
-
-function launchesView() {
-  const basic = basicLaunchGames();
-  return `<div class="cols">
-    ${card('CrazyGames Basic Launch', `Games whose soft launch started in the last ${BASIC_LAUNCH_WINDOW_DAYS} days. Full launch follows once a game has been live ${BASIC_LAUNCH_MIN_DAYS}+ days with ${full(BASIC_LAUNCH_MIN_PLAYS)}+ plays.`, pill('crazygames'), basic.map(basicLaunchRow).join('') || `<p class="note">No CrazyGames games started Basic Launch in the last ${BASIC_LAUNCH_WINDOW_DAYS} days in the current data.</p>`)}
-  </div>
-  <p class="note">CrazyGames launch dates come from each game page, and only games in the Hot or New lists are checked. Poki's playtests are on the Poki tests tab.</p>`;
-}
-
 function drawTable() {
   const p = active();
   const box = $('#tablebox');
@@ -691,7 +648,7 @@ function render() {
   } else {
     const errs = Object.entries(d.errors ?? {});
     if (errs.length) html += `<div class="banner">Couldn't update ${errs.map(([k, v]) => `${NAMES[k] ?? ERROR_NAMES[k] ?? k} (${esc(v)})`).join(', ')}. Showing the last good data for ${errs.length > 1 ? 'those' : 'it'}.</div>`;
-    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'mobile' ? mobileView() : state.tab === 'launches' ? launchesView() : state.tab === 'playtests' ? playtestsView() : state.tab === 'social' ? socialView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
+    html += state.tab === 'keywords' ? kwView() : state.tab === 'pages' ? pagesView() : state.tab === 'newsletter' ? newsletterView() : state.tab === 'mobile' ? mobileView() : state.tab === 'playtests' ? playtestsView() : state.tab === 'social' ? socialView() : state.tab === 'overview' || !d[state.tab] ? overview() : platformView(state.tab);
   }
   $('#app').innerHTML = html;
   drawTable();
