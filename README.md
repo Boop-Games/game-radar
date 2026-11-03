@@ -24,6 +24,7 @@ The installer is unsigned, so Windows SmartScreen may show a warning: choose **M
 - **Keywords:** common words and phrases across game titles, weighted by live players or mobile chart position.
 - **Social:** trending hashtags and posts from a public Mastodon server (no key needed), game and non-game topics, plus a search box for any hashtag. Shown in the Social tab and in the newsletter.
 - **Mobile:** the iOS and Android charts sit in their own Mobile tab.
+- **Launches:** CrazyGames games still in their 7–21 day Basic Launch, with progress toward the 7-day / 500-play exit. Poki playtests are on the Poki tests tab.
 
 ## Develop
 
