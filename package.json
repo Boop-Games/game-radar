@@ -26,6 +26,12 @@
     "directories": {
       "output": "release"
     },
+    "publish": {
+      "provider": "github",
+      "owner": "Boop-Games",
+      "repo": "game-radar",
+      "releaseType": "release"
+    },
     "files": [
       "bin/**/*",
       "src/**/*",
@@ -69,6 +75,7 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
+    "electron-updater": "^6.8.11",
     "google-play-scraper": "^10.1.4"
   }
 }

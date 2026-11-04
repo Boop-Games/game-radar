@@ -2,6 +2,7 @@ import { app, BrowserWindow, Tray, Menu, Notification, nativeImage, shell } from
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { initUpdater } from './updater.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ICON = path.join(here, '..', 'build', 'icon.png');
@@ -31,6 +32,7 @@ let tray = null;
 let backend = null;
 let quitting = false;
 let told = false;
+let updater = null;
 const settings = loadSettings();
 
 function showWindow() {
@@ -73,6 +75,21 @@ function createWindow(port) {
   });
 }
 
+function updateMenuItem() {
+  const u = updater?.state ?? { status: 'idle' };
+  if (u.status === 'ready') {
+    return {
+      label: `Restart to update to ${u.version}`,
+      click: () => {
+        quitting = true;
+        updater.install();
+      },
+    };
+  }
+  const label = { checking: 'Checking for updates…', downloading: `Downloading ${u?.version ?? 'update'}…`, error: 'Update check failed — retry' }[u.status] ?? 'Check for updates';
+  return { label, enabled: !['dev', 'checking', 'downloading'].includes(u.status), click: () => updater.check() };
+}
+
 function buildMenu() {
   return Menu.buildFromTemplate([
     { label: 'Open Game Radar', click: showWindow },
@@ -96,6 +113,8 @@ function buildMenu() {
         saveSettings(settings);
       },
     },
+    { type: 'separator' },
+    updateMenuItem(),
     { type: 'separator' },
     {
       label: 'Quit',
@@ -139,6 +158,7 @@ app.whenReady().then(async () => {
     },
   });
   createWindow(backend.port);
+  updater = initUpdater({ icon: ICON, onChange: () => tray?.setContextMenu(buildMenu()) });
   createTray();
 });
 
