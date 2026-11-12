@@ -1,7 +1,7 @@
 {
   "name": "game-radar",
   "productName": "Game Radar",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "Tray app that tracks the top and fastest-rising games on Roblox and Poki",
   "author": "Boop Games",
   "type": "module",
