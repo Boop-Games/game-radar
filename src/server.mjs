@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { runCollection } from './collect.mjs';
-import { loadLatest } from './store.mjs';
+import { loadLatest, loadHistory, loadPokiTests } from './store.mjs';
 import { findAlerts } from './alerts.mjs';
 import { PLATFORMS } from './rank.mjs';
 import { lookupTag } from './social.mjs';
@@ -54,6 +54,18 @@ export async function startServer({ port = 4173, host = '127.0.0.1', intervalMs 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/status') return send(res, 200, status());
+    // Downloads everything collected so far as one portable JSON file, for sharing with someone else.
+    if (url.pathname === '/api/export' && req.method === 'GET') {
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+      const body = JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        latest: latest ?? null,
+        pokiTests: await loadPokiTests(),
+        history: await loadHistory(),
+      }, null, 2);
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'content-disposition': `attachment; filename="game-radar-export-${stamp}.json"`, 'cache-control': 'no-store' });
+      return res.end(body);
+    }
     if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, social: latest?.social ?? null, pokiTests: latest?.pokiTests ?? null, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
     if (url.pathname.startsWith('/api/social/tag/') && req.method === 'GET') {
       const tag = await lookupTag(decodeURIComponent(url.pathname.slice('/api/social/tag/'.length)));
