@@ -693,6 +693,22 @@ async function poll() {
 }
 
 // ---------- events ----------
+document.addEventListener('change', async (e) => {
+  if (e.target.id !== 'import-file') return;
+  const input = e.target;
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const r = await fetch('/api/import', { method: 'POST', headers: { 'content-type': 'application/json' }, body: await file.text() });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || `Import failed (${r.status})`);
+    alert(`Imported ${out.added} new history samples across ${out.keys} games. Charts and rising scores update on the next refresh.`);
+    await loadData();
+  } catch (err) {
+    alert(err.message);
+  }
+});
 document.addEventListener('click', async (e) => {
   const t = e.target;
   const tab = t.closest('[data-tab]');
@@ -721,6 +737,7 @@ document.addEventListener('click', async (e) => {
   const testStatus = t.closest('[data-test-status]');
   if (testStatus) { state.tests.status = testStatus.dataset.testStatus; state.tests.limit = 100; return render(); }
   if (t.id === 'test-more') { state.tests.limit += 100; return render(); }
+  if (t.id === 'import') return $('#import-file').click();
   const page = t.closest('[data-page]');
   if (page) { state.page = page.dataset.page; return render(); }
   const newsletter = t.closest('[data-newsletter]');

@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { runCollection } from './collect.mjs';
-import { loadLatest, loadHistory, loadPokiTests } from './store.mjs';
+import { loadLatest, loadHistory, loadPokiTests, importHistory } from './store.mjs';
 import { findAlerts } from './alerts.mjs';
 import { PLATFORMS } from './rank.mjs';
 import { lookupTag } from './social.mjs';
@@ -65,6 +65,18 @@ export async function startServer({ port = 4173, host = '127.0.0.1', intervalMs 
       }, null, 2);
       res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'content-disposition': `attachment; filename="game-radar-export-${stamp}.json"`, 'cache-control': 'no-store' });
       return res.end(body);
+    }
+    // Merges the `history` from an export file (see /api/export) into this install's history.
+    if (url.pathname === '/api/import' && req.method === 'POST') {
+      let body = '';
+      for await (const chunk of req) {
+        body += chunk;
+        if (body.length > 200e6) return send(res, 413, { error: 'File too large' });
+      }
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { return send(res, 400, { error: 'Not a valid JSON file' }); }
+      if (!parsed?.history || typeof parsed.history !== 'object' || Array.isArray(parsed.history)) return send(res, 400, { error: 'This file has no history to import' });
+      return send(res, 200, await importHistory(parsed.history));
     }
     if (url.pathname === '/api/data') return send(res, 200, { ...status(), errors: latest?.errors ?? {}, social: latest?.social ?? null, pokiTests: latest?.pokiTests ?? null, ...Object.fromEntries(PLATFORMS.map((p) => [p, latest?.[p]])) });
     if (url.pathname.startsWith('/api/social/tag/') && req.method === 'GET') {

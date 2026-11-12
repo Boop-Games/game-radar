@@ -25,6 +25,26 @@ async function writeJson(name, value) {
 
 export const loadHistory = () => readJson('history.json', {});
 export const saveHistory = (h) => writeJson('history.json', h);
+
+// Merges samples from an exported history into the local one. Samples are keyed by timestamp,
+// so importing the same file twice adds nothing. Anything older than the keep window is pruned on the next refresh.
+export async function importHistory(imported) {
+  const current = await loadHistory();
+  let added = 0;
+  for (const [key, pts] of Object.entries(imported)) {
+    if (!Array.isArray(pts)) continue;
+    const byTime = new Map((current[key] ?? []).map((p) => [p[0], p]));
+    for (const p of pts) {
+      if (Array.isArray(p) && Number.isFinite(p[0]) && !byTime.has(p[0])) {
+        byTime.set(p[0], p);
+        added++;
+      }
+    }
+    current[key] = [...byTime.values()].sort((a, b) => a[0] - b[0]);
+  }
+  await saveHistory(current);
+  return { keys: Object.keys(imported).length, added };
+}
 export const loadLatest = () => readJson('latest.json', null);
 export const saveLatest = (s) => writeJson('latest.json', s);
 // Every Poki game ever seen in test, kept for good (history.json forgets after a week).
